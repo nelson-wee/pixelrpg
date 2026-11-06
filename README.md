@@ -16,6 +16,16 @@ git submodule update --init
 
 The tools need Node 18 or newer. They use no packages.
 
+## Web viewer (GitHub Pages)
+
+`docs/` is a static site: the Wardrobe. It draws units live in the browser with the same sprite code that makes the sheets. You can select class tiers, any gear piece, the male or female body, the hair colour and the SE or NW facing, and switch between the idle and the attack animation.
+
+To publish it, open the repository's **Settings → Pages**. Set **Source** to "Deploy from a branch", **Branch** to `dev` (or `main` after a merge) and **Folder** to `/docs`. To try it on your own computer, serve the `docs` folder with any static server:
+
+```bash
+python3 -m http.server --directory docs 8000
+```
+
 ## Make the sprites again
 
 ```bash
@@ -36,7 +46,9 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 
 | Path | Contents |
 |---|---|
-| `tools/art.mjs` | The generator: palette, skeleton, gear, stances, attacks, tiles, props, icons, UI frames, battle map |
+| `docs/lib/pixelrpg.js` | The sprite core: palette, skeleton, gear, stances, attacks, tiles, props, icons, UI frames. Pure JavaScript, used by both the generator and the web viewer |
+| `tools/art.mjs` | The generator: writes every sheet in `sprites/art`, the battle map and the combat clips |
+| `docs/index.html`, `docs/app.js` | The web viewer (Wardrobe) |
 | `tools/fx.mjs` | Renders the chosen pixelfx effects as one-row strips at 15 fps, recoloured with the system ramps |
 | `tools/zoom.mjs` | Nearest-neighbour preview of a PNG |
 | `sprites/art/` | Generated sheets and atlases, plus `gear.json` (atlas cells, shoulder and hem widths) and `art.json` |
