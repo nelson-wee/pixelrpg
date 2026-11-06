@@ -191,7 +191,12 @@ const STANCES = {
   archer: { name: "Archer", crouch: 1, lean: 0.04, main: { e: [14.8, 24.2], h: [23.4, 19.8] }, off: { e: [35, 23], h: [39.4, 23.6] }, mainDir: [0.6, -0.8], offDir: [0, -1] },
   rogue:  { name: "Dual", crouch: 3, lean: 0.12, main: { e: [20.4, 30], h: [25.6, 32.6] }, off: { e: [33.6, 27.4], h: [36.6, 27.6] }, mainDir: [0.22, -0.975], offDir: [0.18, -0.984] },
   lancer: { name: "Lancer", crouch: 2, lean: 0.06, main: { e: [17.6, 30.2], h: [21.2, 36] }, off: { e: [33, 26.4], h: [29.4, 26.8] }, mainDir: [0.66, -0.751], offDir: [0.66, -0.751] },
+  // two-handed sword: both hands on the grip (the off hand is placed on the grip by rig), blade up and forward
+  greatsword: { name: "Greatsword", crouch: 2, lean: 0.08, main: { e: [20, 29], h: [25, 31.4] }, off: { e: [32.6, 26.8], h: [0, 0] }, mainDir: [0.5, -0.866], offDir: [0, -1] },
 };
+// one-handed spear with a shield: the same ready pose as the sword-and-shield guard
+STANCES.phalanx = { ...STANCES.guard, name: "Spear & shield" };
+const TWO_HANDED = ["greatsword", "spear", "dragonspear"];
 const ATK = {
   guard: [{ main: { e: [16.4, 24.8], h: [20.4, 20.2] }, mainDir: [-0.2, -0.98], lean: 0.04 },
           { main: { e: [26.6, 28.6], h: [31, 31] }, mainDir: [0.88, 0.475], lean: 0.16, dc: 1, step: 3 },
@@ -211,9 +216,21 @@ const ATK = {
            { main: { e: [22.4, 29.6], h: [27, 33] }, off: { e: [34.6, 22.8], h: [37.3, 26.9] }, mainDir: [0.86, -0.51], lean: 0.2, dc: 1, step: 6 },
            { main: { e: [21, 30], h: [25.4, 34] }, off: { e: [34, 23], h: [35, 26.8] }, mainDir: [0.8, -0.6], lean: 0.15, step: 4 }],
 };
+ATK.greatsword = [
+  { main: { e: [14.6, 22.4], h: [20, 17.6] }, off: { e: [25, 16], h: [0, 0] }, mainDir: [-0.6, 0.8], lean: -0.02, dc: -1 },
+  { main: { e: [26, 28], h: [33, 31] }, off: { e: [36.6, 25.4], h: [0, 0] }, mainDir: [0.92, 0.39], lean: 0.2, dc: 1, step: 6 },
+  { main: { e: [25, 30.6], h: [31, 35] }, off: { e: [35.4, 28], h: [0, 0] }, mainDir: [0.85, 0.53], lean: 0.16, dc: 1, step: 5 },
+];
+ATK.phalanx = [
+  { main: { e: [14.6, 26], h: [18.4, 21] }, mainDir: [0.94, -0.34], lean: 0.02 },
+  { main: { e: [25.6, 23.4], h: [31, 22] }, mainDir: [0.97, -0.24], lean: 0.18, dc: 1, step: 5 },
+  { main: { e: [23.4, 25], h: [28, 23] }, mainDir: [0.95, -0.31], lean: 0.14, step: 4 },
+];
 const POSES = ["Ready", "Wind-up", "Strike", "Follow-through"];
 const BOWS = ["bow", "shortbow", "greatbow"], SPEARS = ["spear", "dragonspear"], RODS = ["staff", "rod", "sceptre"];
 function stanceOf(lo = {}) {
+  if (lo.main === "greatsword") return "greatsword";
+  if (lo.main === "shortspear") return "phalanx";
   if (BOWS.includes(lo.off)) return "archer";
   if (SPEARS.includes(lo.main)) return "lancer";
   if (RODS.includes(lo.main) || lo.off === "tome") return "caster";
@@ -227,6 +244,7 @@ function rig(view, bob, body = {}, stance = "guard", pose = 0) {
   const shift = S.step * 0.5 * d, at = ([x, y]) => [mx(x) + shift, y + b];
   const main = { s: at([18.6 + n, 21.8 + n * 0.6]), e: at(S.main.e), h: at(S.main.h) };
   const off = { s: at([30.4 - n, 21.2 + n * 0.6]), e: at(S.off.e), h: at(S.off.h) };
+  if (stance === "greatsword") off.h = add2(main.h, [S.mainDir[0] * d, S.mainDir[1]], 3.4);
   const hipY = 35 + b, tx = (y) => 24.5 + shift + Math.max(0, hipY - y) * S.lean * d;
   // feet on the SE diagonal: lead foot forward-right, rear foot back-left (rotated 180° for the back view)
   const g = (ox, oy) => [24.4 + ox * d, 58.4 + oy * d];
@@ -915,6 +933,19 @@ Object.assign(GEAR.main, {
   } },
   mace: { name: "Flanged mace", draw(img, K) { maceAt(img, K, K.main.h, K.mainDir); } },
   dagger: { name: "Dagger", draw(img, K) { daggerAt(img, K.main.h, K.mainDir); } },
+  greatsword: { name: "Greatsword (two-handed)", draw(img, K) {
+    const [h, v, p] = MD(K), g = add2(h, v, 5.6);
+    pole(img, add2(h, v, -3), add2(h, v, 4.8), P("leather", 3), P("leather", 2), (x, y) => nearHand(K, x, y));
+    pole(img, add2(h, v, 6), add2(h, v, 40), P("steel", 4), P("steel", 2));
+    for (let i = -5; i <= 5; i++) { const q = add2(g, p, i); img.set(q[0], q[1], P("gold", i < 0 ? 4 : 2)); }
+    for (const k of [-1, 1]) { const q = add2(add2(g, p, k * 5), v, 1); img.set(q[0], q[1], P("gold", 3)); }
+    const pm = add2(h, v, -4.4); img.set(pm[0], pm[1], P("gold", 3)); img.set(pm[0] + 1, pm[1], P("gold", 2));
+  } },
+  shortspear: { name: "Short spear (one-handed)", draw(img, K) {
+    const [h, v, p] = MD(K), base = add2(h, v, 30), tip = add2(h, v, 37);
+    pole(img, add2(h, v, -10), base, P("leather", 3), P("leather", 2), (x, y) => nearHand(K, x, y));
+    headDiamond(img, base, tip, p, 1.9, "steel");
+  } },
   spear: { name: "Dragoon spear", draw(img, K) {
     const [h, v, p] = MD(K), base = add2(h, v, 30), tip = add2(h, v, 38);
     pole(img, add2(h, v, -14), base, P("leather", 3), P("leather", 2), (x, y) => nearHand(K, x, y));
@@ -1004,6 +1035,9 @@ const CLASSES = {
     ["Dragon Knight", "Scale", { head: "winghelm", shoulders: "spaulders", chest: "scaleplate", arms: "gauntlets", legs: "greaves", back: "dragoncape", main: "dragonspear" }]] },
 };
 for (const k of Object.values(CLASSES)) k.loadout = k.tiers[2][2];
+// weapon variants shown on the stance and attack sheets
+const KNIGHT_GS = { ...CLASSES.knight.loadout, main: "greatsword", off: undefined };
+const LANCER_PH = { ...CLASSES.lancer.loadout, main: "shortspear", off: "shield" };
 const bodyOf = (k, type) => (k.body.type === type ? k.body : k.alt);
 
 function layerImg(slot, id, view, bob, body, stance = "guard", pose = 0) {
@@ -1025,6 +1059,7 @@ function dress(loadout, view, bob = 0, body = {}, only = null, stance = stanceOf
     if (only && !only.includes(slot) && !(slot === "hair" && only.includes("base"))) continue;
     const id = BODYSLOT(slot) ? slot : loadout[slot];
     if (!id) continue;
+    if (slot === "off" && TWO_HANDED.includes(loadout.main)) continue; // two-handed weapons use both hands
     const l = layerImg(slot, id, view, bob, body, stance, pose);
     if (l) out.blit(l, 0, 0);
   }
@@ -1497,10 +1532,10 @@ console.log("ok", mapInfo);
 
 // stance sheet: each stance on an iso tile, SE front row and NW back row
 {
-  const picks = [["guard", "knight"], ["caster", "mage"], ["archer", "archer"], ["rogue", "thief"], ["lancer", "lancer"]];
+  const C = CLASSES, picks = [["guard", C.knight.loadout, C.knight.body], ["caster", C.mage.loadout, C.mage.body], ["archer", C.archer.loadout, C.archer.body], ["rogue", C.thief.loadout, C.thief.body], ["lancer", C.lancer.loadout, C.lancer.body], ["greatsword", KNIGHT_GS, C.knight.body], ["phalanx", LANCER_PH, C.lancer.body]];
   const SH = 100, s = new Img(picks.length * CW, 2 * SH);
-  picks.forEach(([st, key], i) => ["front", "back"].forEach((v, r) => {
-    const k = CLASSES[key];
+  picks.forEach(([st, lo, bd], i) => ["front", "back"].forEach((v, r) => {
+    const k = { loadout: lo, body: bd };
     s.blit(tile("grass", 1, i * 3 + r), i * CW + 24 - HW, r * SH + FY - HH);
     s.blit(dress(k.loadout, v, 0, k.body, null, st), i * CW, r * SH);
   }));
@@ -1510,8 +1545,10 @@ console.log("ok", mapInfo);
 // attack animation: one row per class (default body, top tier); SE poses 0-3 then NW poses 0-3
 {
   LW = 96; LOX = 24;
-  const keys = Object.keys(CLASSES), s2 = new Img(8 * LW, keys.length * CH);
-  keys.forEach((key, r) => { const k = CLASSES[key]; ["front", "back"].forEach((v, vi) => [0, 1, 2, 3].forEach((p) => s2.blit(dress(k.loadout, v, 0, k.body, null, stanceOf(k.loadout), p), (vi * 4 + p) * LW, r * CH))); });
+  // rows: the six classes, then the knight with a greatsword and the lancer with spear and shield
+  const rows = Object.values(CLASSES).map((k) => [k.loadout, k.body]).concat([[KNIGHT_GS, CLASSES.knight.body], [LANCER_PH, CLASSES.lancer.body]]);
+  const s2 = new Img(8 * LW, rows.length * CH);
+  rows.forEach(([lo, bd], r) => ["front", "back"].forEach((v, vi) => [0, 1, 2, 3].forEach((p) => s2.blit(dress(lo, v, 0, bd, null, stanceOf(lo), p), (vi * 4 + p) * LW, r * CH))));
   s2.png("attacks.png");
 }
 // dual wield across classes: same stance with three weapon pairs

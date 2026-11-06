@@ -49,9 +49,10 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 - **Palette:** 18 ramps of 5 steps. Dark steps go cooler and light steps go warmer. There are no gradients and no anti-aliasing.
 - **Light:** one light, from the top left. Each shape has an outline in step 0 of its own ramp. Ink (`#2a1f2d`) is used only on the bottom-right edges.
 - **Units:** a 48 × 76 px cell, with the feet at (24, 72). A unit is about 5 heads tall.
-- **Gear:** one base body (male or female) plus 8 slots: head, shoulders, chest, arms, legs, back, main hand and off hand. Each layer has its own outline. There are 77 pieces and 3 tiers for each class.
+- **Gear:** one base body (male or female) plus 8 slots: head, shoulders, chest, arms, legs, back, main hand and off hand. Each layer has its own outline. There are 79 pieces and 3 tiers for each class.
 - **Silhouette:** heavy armour makes a V shape, robes make an A shape, and light gear makes an I shape.
-- **Stances:** the equipped weapon selects the stance: guard, caster, archer, dual wield or lancer. Units face SE (front) or NW (back), with the feet on the tile diagonal.
+- **Stances:** the equipped weapon selects the stance: guard, caster, archer, dual wield, lancer, greatsword, or spear and shield. Units face SE (front) or NW (back), with the feet on the tile diagonal.
+- **Two-handed weapons:** the greatsword, the spear and the dragon lance use both hands, so the off-hand layer is not drawn. The short spear is one-handed and goes with a shield. It uses the guard ready pose and has its own thrust attack.
 - **Attacks:** 4 frames (ready 560 ms, wind-up 320 ms, strike 200 ms, follow-through 350 ms) in a 96 × 76 px cell, with the feet at (48, 72).
 - **Tiles:** 48 × 24 px on a 2:1 grid, with 12 px for each height step. Screen X = (col − row) × 24. Screen Y = (col + row) × 12 − height × 12.
 
@@ -61,8 +62,8 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 |---|---|
 | `unit-<class>.png` | 4 frames of 48 × 76: front idle ×2, back idle ×2 |
 | `tiers.png` | 6 rows (classes) × 6 columns (T1–T3 male, T1–T3 female) |
-| `attacks.png` | 6 rows × 8 frames of 96 × 76: 4 SE poses, then 4 NW poses |
-| `atlas-<m\|f>-<stance>.png` | Every gear layer alone, 12 columns of 48 × 76. Cell positions are in `gear.json` |
+| `attacks.png` | 8 rows × 8 frames of 96 × 76: 4 SE poses, then 4 NW poses. Rows: the 6 classes, then the knight with a greatsword, then the lancer with spear and shield |
+| `atlas-<m\|f>-<stance>.png` | Every gear layer alone, 12 columns of 48 × 76. Cell positions are in `gear.json`. The phalanx (spear and shield) atlas is the same as the guard atlas |
 | `battle-map.png` | The 11 × 11 sample map, 552 × 412 |
 | `tiles-*.png`, `props.png`, `icons.png`, `frame-*.png` | Terrain, height steps, tile markers, props, 16 px icons, 9-slice windows |
 
