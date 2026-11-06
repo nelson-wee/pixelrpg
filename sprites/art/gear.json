@@ -681,11 +681,29 @@
    "hem": 0
   },
   {
+   "slot": "main",
+   "id": "greatsword",
+   "name": "Greatsword (two-handed)",
+   "col": 11,
+   "row": 5,
+   "sh": 13,
+   "hem": 0
+  },
+  {
+   "slot": "main",
+   "id": "shortspear",
+   "name": "Short spear (one-handed)",
+   "col": 0,
+   "row": 6,
+   "sh": 8,
+   "hem": 0
+  },
+  {
    "slot": "off",
    "id": "shield",
    "name": "Kite shield",
-   "col": 11,
-   "row": 5,
+   "col": 1,
+   "row": 6,
    "sh": 13,
    "hem": 0
   },
@@ -693,7 +711,7 @@
    "slot": "off",
    "id": "bow",
    "name": "Longbow",
-   "col": 0,
+   "col": 2,
    "row": 6,
    "sh": 7,
    "hem": 5
@@ -702,7 +720,7 @@
    "slot": "off",
    "id": "dagger",
    "name": "Off-hand dagger",
-   "col": 1,
+   "col": 3,
    "row": 6,
    "sh": 4,
    "hem": 0
@@ -711,7 +729,7 @@
    "slot": "off",
    "id": "buckler",
    "name": "Buckler",
-   "col": 2,
+   "col": 4,
    "row": 6,
    "sh": 4,
    "hem": 0
@@ -720,7 +738,7 @@
    "slot": "off",
    "id": "shortbow",
    "name": "Short bow",
-   "col": 3,
+   "col": 5,
    "row": 6,
    "sh": 7,
    "hem": 0
@@ -729,7 +747,7 @@
    "slot": "off",
    "id": "greatbow",
    "name": "Recurve greatbow",
-   "col": 4,
+   "col": 6,
    "row": 6,
    "sh": 6,
    "hem": 6
@@ -738,7 +756,7 @@
    "slot": "off",
    "id": "tome",
    "name": "Prayer book",
-   "col": 5,
+   "col": 7,
    "row": 6,
    "sh": 0,
    "hem": 0
@@ -747,7 +765,7 @@
    "slot": "off",
    "id": "offsword",
    "name": "Off-hand sword",
-   "col": 6,
+   "col": 8,
    "row": 6,
    "sh": 4,
    "hem": 0
@@ -756,7 +774,7 @@
    "slot": "off",
    "id": "offmace",
    "name": "Off-hand mace",
-   "col": 7,
+   "col": 9,
    "row": 6,
    "sh": 9,
    "hem": 0
