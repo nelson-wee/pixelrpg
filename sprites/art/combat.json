@@ -1,0 +1,72 @@
+{
+ "knight-slash": {
+  "w": 208,
+  "h": 120,
+  "frames": 26,
+  "fps": 15,
+  "hitFrame": 9,
+  "freeze": 2,
+  "effect": "melee/sword-slash",
+  "impact": null
+ },
+ "knight-greatsword": {
+  "w": 208,
+  "h": 120,
+  "frames": 40,
+  "fps": 15,
+  "hitFrame": 9,
+  "freeze": 3,
+  "effect": "melee/heavy-cleave",
+  "impact": null
+ },
+ "thief-x": {
+  "w": 208,
+  "h": 120,
+  "frames": 25,
+  "fps": 15,
+  "hitFrame": 9,
+  "freeze": 1,
+  "effect": "melee/double-slash",
+  "impact": null
+ },
+ "lancer-thrust": {
+  "w": 208,
+  "h": 120,
+  "frames": 26,
+  "fps": 15,
+  "hitFrame": 9,
+  "freeze": 2,
+  "effect": "melee/thrust",
+  "impact": null
+ },
+ "lancer-phalanx": {
+  "w": 208,
+  "h": 120,
+  "frames": 26,
+  "fps": 15,
+  "hitFrame": 9,
+  "freeze": 2,
+  "effect": "melee/thrust",
+  "impact": null
+ },
+ "mage-fireball": {
+  "w": 256,
+  "h": 210,
+  "frames": 51,
+  "fps": 15,
+  "hitFrame": 19,
+  "freeze": 2,
+  "effect": "fire/fireball",
+  "impact": "explosions/plasma-explosion"
+ },
+ "archer-arrow": {
+  "w": 256,
+  "h": 150,
+  "frames": 30,
+  "fps": 15,
+  "hitFrame": 16,
+  "freeze": 2,
+  "effect": "projectiles/arrow",
+  "impact": "impacts/hit-spark"
+ }
+}

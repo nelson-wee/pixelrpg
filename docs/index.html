@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pixelrpg · Wardrobe</title>
+<meta name="description" content="Try the layered gear of the pixelrpg sprite system: classes, tiers, two bodies, idle and attack animation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Alegreya+Sans:wght@400;500;700&family=Silkscreen&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ground: #1a1220; --panel: #241a2e; --edge: #3d2f42; --stage: #120c18;
+  --text: #ead6b0; --muted: #b8a8b6; --dim: #a898aa; --strong: #fbf2dc; --gold: #f0c85a;
+  --chip: #2c2440; --chip-hi: #46506e; --parch: #ead6b0; --ink: #3a2a22;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--text); font-family: 'Alegreya Sans', sans-serif; }
+a { color: var(--gold); } a:hover { color: #fff2b0; }
+header { max-width: 1400px; margin: 0 auto; padding: 32px 24px 8px; display: flex; flex-wrap: wrap; gap: 8px 32px; align-items: flex-end; justify-content: space-between; }
+.eyebrow { font-family: 'Silkscreen', monospace; font-size: 13px; letter-spacing: 2px; color: var(--gold); }
+h1 { margin: 6px 0 0; font-family: 'Pixelify Sans', sans-serif; font-size: clamp(32px, 5vw, 48px); color: var(--strong); }
+header p { margin: 0; max-width: 560px; color: var(--muted); line-height: 1.45; }
+main { max-width: 1400px; margin: 0 auto; padding: 16px 24px 48px; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.left { flex: 0 0 auto; display: flex; flex-direction: column; gap: 16px; max-width: 100%; }
+.right { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.stages { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+.stage { background: var(--stage); border: 2px solid var(--edge); padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.stage.sil { background: var(--parch); }
+canvas { image-rendering: pixelated; display: block; max-width: 100%; height: auto; }
+.cap { font-family: 'Silkscreen', monospace; font-size: 11px; color: var(--dim); }
+.sil .cap { color: var(--ink); }
+.label { font-family: 'Silkscreen', monospace; font-size: 12px; letter-spacing: 1px; color: var(--gold); }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.toggles { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; }
+.chip { font-family: 'Alegreya Sans', sans-serif; font-size: 14px; min-height: 44px; padding: 4px 12px; border: 0; background: var(--chip); color: var(--text);
+  box-shadow: inset -2px -2px 0 #1a1220, inset 2px 2px 0 var(--chip-hi); cursor: pointer; }
+.chip:hover { background: var(--edge); }
+.chip:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.chip[aria-pressed="true"] { background: var(--gold); color: var(--ink); box-shadow: inset -2px -2px 0 #8a5a1e, inset 2px 2px 0 #fff2b0; }
+.readout { background: var(--panel); border: 2px solid var(--edge); padding: 14px 18px; display: flex; align-items: center; gap: 18px; }
+.shape { font-family: 'Pixelify Sans', sans-serif; font-size: 56px; line-height: 1; font-weight: 700; color: var(--gold); width: 48px; text-align: center; }
+.readout .name { font-family: 'Pixelify Sans', sans-serif; font-size: 19px; color: var(--strong); }
+.presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 8px 24px; }
+.preset { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.preset .cls { width: 64px; flex: 0 0 64px; font-family: 'Pixelify Sans', sans-serif; font-size: 17px; color: var(--strong); }
+.slot { display: flex; gap: 12px; align-items: flex-start; }
+.slot .label { width: 92px; flex: 0 0 92px; padding-top: 14px; }
+hr { border: 0; height: 2px; background: var(--edge); margin: 4px 0; width: 100%; }
+footer { max-width: 1400px; margin: 0 auto; padding: 0 24px 40px; color: var(--dim); font-size: 14px; }
+@media (max-width: 640px) { .slot { flex-direction: column; gap: 4px; } .slot .label { padding-top: 0; } .presets { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="eyebrow">PIXELRPG · SPRITE SYSTEM</div>
+    <h1>Wardrobe</h1>
+  </div>
+  <p>Every unit is one base body plus 8 gear layers, drawn live in your browser by the same code that makes the sprite sheets. The weapon sets the combat stance. Switch between the idle and the attack animation.</p>
+</header>
+<main>
+  <section class="left" aria-label="Preview">
+    <div class="stages">
+      <div class="stage"><canvas id="unit" width="448" height="416" aria-label="The dressed unit, animated"></canvas><span class="cap" id="unitCap">SE · IDLE · 4×</span></div>
+      <div class="stage sil"><canvas id="sil" width="224" height="208" aria-label="The unit's silhouette"></canvas><span class="cap">SILHOUETTE · 2×</span></div>
+    </div>
+    <div class="toggles">
+      <span class="label">ANIMATION</span><div class="row" id="modes"></div>
+      <span class="label">FACING</span><div class="row" id="views"></div>
+      <span class="label">BODY</span><div class="row" id="bodies"></div>
+      <span class="label">HAIR</span><div class="row" id="hairs"></div>
+    </div>
+    <div class="readout">
+      <div class="shape" id="shape">V</div>
+      <div>
+        <div class="name" id="shapeName"></div>
+        <div class="cap" id="widths"></div>
+        <div class="cap" id="stance" style="color: var(--gold); margin-top: 4px"></div>
+      </div>
+    </div>
+  </section>
+  <section class="right" aria-label="Gear">
+    <div class="label">CLASS PRESETS · T1 / T2 / T3 AND WEAPON VARIANTS</div>
+    <div class="presets" id="presets"></div>
+    <div class="cap" id="presetLabel"></div>
+    <hr>
+    <div id="slots" style="display: flex; flex-direction: column; gap: 10px"></div>
+  </section>
+</main>
+<footer>Source and sprite sheets: <a href="https://github.com/nelson-wee/pixelrpg">github.com/nelson-wee/pixelrpg</a>. Skill effects come from <a href="https://github.com/patch-gg/pixelfx">pixelfx</a>.</footer>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
