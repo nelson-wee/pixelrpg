@@ -1,0 +1,197 @@
+{
+ "sword-slash": {
+  "id": "melee/sword-slash",
+  "w": 136,
+  "h": 104,
+  "n": 12,
+  "fps": 15,
+  "loop": false,
+  "dur": 0.8,
+  "pivot": [
+   44,
+   92
+  ]
+ },
+ "shield-block": {
+  "id": "impacts/shield-block",
+  "w": 148,
+  "h": 104,
+  "n": 18,
+  "fps": 15,
+  "loop": false,
+  "dur": 1.2,
+  "pivot": [
+   40,
+   88
+  ]
+ },
+ "frost-nova": {
+  "id": "ice/frost-nova",
+  "w": 288,
+  "h": 192,
+  "n": 52,
+  "fps": 15,
+  "loop": false,
+  "dur": 3.47,
+  "pivot": [
+   144,
+   150
+  ]
+ },
+ "fireball": {
+  "id": "fire/fireball",
+  "w": 136,
+  "h": 56,
+  "n": 18,
+  "fps": 15,
+  "loop": true,
+  "dur": 1.2,
+  "pivot": [
+   112,
+   28
+  ]
+ },
+ "shadow-bolt": {
+  "id": "fire/fireball",
+  "w": 136,
+  "h": 56,
+  "n": 18,
+  "fps": 15,
+  "loop": true,
+  "dur": 1.2,
+  "pivot": [
+   112,
+   28
+  ]
+ },
+ "arrow": {
+  "id": "projectiles/arrow",
+  "w": 112,
+  "h": 32,
+  "n": 9,
+  "fps": 15,
+  "loop": true,
+  "dur": 0.6,
+  "pivot": [
+   92,
+   16
+  ]
+ },
+ "dagger-flurry": {
+  "id": "melee/dagger-flurry",
+  "w": 148,
+  "h": 104,
+  "n": 15,
+  "fps": 15,
+  "loop": false,
+  "dur": 1,
+  "pivot": [
+   36,
+   86
+  ]
+ },
+ "heal": {
+  "id": "holy/heal",
+  "w": 80,
+  "h": 104,
+  "n": 30,
+  "fps": 15,
+  "loop": false,
+  "dur": 2,
+  "pivot": [
+   40,
+   92
+  ]
+ },
+ "smite": {
+  "id": "holy/smite",
+  "w": 224,
+  "h": 176,
+  "n": 43,
+  "fps": 15,
+  "loop": false,
+  "dur": 2.87,
+  "pivot": [
+   112,
+   148
+  ]
+ },
+ "curse": {
+  "id": "shadow/curse",
+  "w": 112,
+  "h": 124,
+  "n": 52,
+  "fps": 15,
+  "loop": false,
+  "dur": 3.47,
+  "pivot": [
+   56,
+   108
+  ]
+ },
+ "damage-number": {
+  "id": "ui/damage-number",
+  "w": 76,
+  "h": 68,
+  "n": 17,
+  "fps": 15,
+  "loop": false,
+  "dur": 1.13,
+  "pivot": [
+   30,
+   52
+  ]
+ },
+ "level-up": {
+  "id": "ui/level-up",
+  "w": 176,
+  "h": 138,
+  "n": 49,
+  "fps": 15,
+  "loop": false,
+  "dur": 3.27,
+  "pivot": [
+   88,
+   114
+  ]
+ },
+ "chest-open": {
+  "id": "pickups/chest-open",
+  "w": 176,
+  "h": 112,
+  "n": 70,
+  "fps": 15,
+  "loop": false,
+  "dur": 4.67,
+  "pivot": [
+   88,
+   96
+  ]
+ },
+ "slime": {
+  "id": "critters/slime",
+  "w": 112,
+  "h": 88,
+  "n": 27,
+  "fps": 15,
+  "loop": true,
+  "dur": 1.8,
+  "pivot": [
+   56,
+   72
+  ]
+ },
+ "ghost": {
+  "id": "critters/ghost",
+  "w": 96,
+  "h": 100,
+  "n": 36,
+  "fps": 15,
+  "loop": true,
+  "dur": 2.4,
+  "pivot": [
+   48,
+   90
+  ]
+ }
+}

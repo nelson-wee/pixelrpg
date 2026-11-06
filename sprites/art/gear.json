@@ -1,0 +1,1022 @@
+{
+ "CW": 48,
+ "CH": 76,
+ "ACOLS": 12,
+ "order": {
+  "front": [
+   "back",
+   "hair",
+   "base",
+   "legs",
+   "chest",
+   "limbs",
+   "arms",
+   "shoulders",
+   "head",
+   "off",
+   "main"
+  ],
+  "back": [
+   "main",
+   "off",
+   "limbs",
+   "arms",
+   "base",
+   "legs",
+   "chest",
+   "back",
+   "hair",
+   "shoulders",
+   "head"
+  ]
+ },
+ "slots": [
+  "head",
+  "shoulders",
+  "chest",
+  "arms",
+  "legs",
+  "back",
+  "main",
+  "off"
+ ],
+ "gear": [
+  {
+   "slot": "base",
+   "id": "base",
+   "name": "Base body",
+   "col": 0,
+   "row": 0,
+   "sh": 15,
+   "hem": 22
+  },
+  {
+   "slot": "limbs",
+   "id": "limbs",
+   "name": "Bare arms",
+   "col": 1,
+   "row": 0,
+   "sh": 21,
+   "hem": 0
+  },
+  {
+   "slot": "hair",
+   "id": "hair",
+   "name": "Long hair",
+   "col": 2,
+   "row": 0,
+   "sh": 0,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "greathelm",
+   "name": "Crested great helm",
+   "col": 3,
+   "row": 0,
+   "sh": 13,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "wizhat",
+   "name": "Wide-brim hat",
+   "col": 4,
+   "row": 0,
+   "sh": 0,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "mitre",
+   "name": "Mitre & veil",
+   "col": 5,
+   "row": 0,
+   "sh": 9,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "hood",
+   "name": "Ranger hood",
+   "col": 6,
+   "row": 0,
+   "sh": 18,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "cowl",
+   "name": "Cowl & mask",
+   "col": 7,
+   "row": 0,
+   "sh": 15,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "winghelm",
+   "name": "Winged spire helm",
+   "col": 8,
+   "row": 0,
+   "sh": 8,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "leathercap",
+   "name": "Leather cap",
+   "col": 9,
+   "row": 0,
+   "sh": 0,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "coif",
+   "name": "Mail coif & nasal helm",
+   "col": 10,
+   "row": 0,
+   "sh": 17,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "cap",
+   "name": "Apprentice cap",
+   "col": 11,
+   "row": 0,
+   "sh": 0,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "magehood",
+   "name": "Pointed hood",
+   "col": 0,
+   "row": 1,
+   "sh": 18,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "veil",
+   "name": "Veil & circlet",
+   "col": 1,
+   "row": 1,
+   "sh": 8,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "huntercap",
+   "name": "Feathered cap",
+   "col": 2,
+   "row": 1,
+   "sh": 0,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "falconhelm",
+   "name": "Winged open helm",
+   "col": 3,
+   "row": 1,
+   "sh": 4,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "bandana",
+   "name": "Bandana",
+   "col": 4,
+   "row": 1,
+   "sh": 0,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "shadowmask",
+   "name": "Demon mask & hood",
+   "col": 5,
+   "row": 1,
+   "sh": 17,
+   "hem": 0
+  },
+  {
+   "slot": "head",
+   "id": "kettle",
+   "name": "Kettle hat",
+   "col": 6,
+   "row": 1,
+   "sh": 0,
+   "hem": 0
+  },
+  {
+   "slot": "shoulders",
+   "id": "pauldrons",
+   "name": "Great pauldrons",
+   "col": 7,
+   "row": 1,
+   "sh": 37,
+   "hem": 0
+  },
+  {
+   "slot": "shoulders",
+   "id": "spaulders",
+   "name": "Spiked spaulders",
+   "col": 8,
+   "row": 1,
+   "sh": 27,
+   "hem": 0
+  },
+  {
+   "slot": "shoulders",
+   "id": "mantle",
+   "name": "Capelet mantle",
+   "col": 9,
+   "row": 1,
+   "sh": 20,
+   "hem": 0
+  },
+  {
+   "slot": "shoulders",
+   "id": "collar",
+   "name": "High collar",
+   "col": 10,
+   "row": 1,
+   "sh": 17,
+   "hem": 0
+  },
+  {
+   "slot": "shoulders",
+   "id": "leatherpads",
+   "name": "Leather pads",
+   "col": 11,
+   "row": 1,
+   "sh": 25,
+   "hem": 0
+  },
+  {
+   "slot": "shoulders",
+   "id": "darkpads",
+   "name": "Lacquered pads",
+   "col": 0,
+   "row": 2,
+   "sh": 27,
+   "hem": 0
+  },
+  {
+   "slot": "shoulders",
+   "id": "halfpauldrons",
+   "name": "Half pauldrons",
+   "col": 1,
+   "row": 2,
+   "sh": 31,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "plate",
+   "name": "Plate cuirass",
+   "col": 2,
+   "row": 2,
+   "sh": 19,
+   "hem": 1
+  },
+  {
+   "slot": "chest",
+   "id": "chain",
+   "name": "Hauberk & surcoat",
+   "col": 3,
+   "row": 2,
+   "sh": 17,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "jerkin",
+   "name": "Tunic & leather vest",
+   "col": 4,
+   "row": 2,
+   "sh": 15,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "garb",
+   "name": "Shadow garb & sash",
+   "col": 5,
+   "row": 2,
+   "sh": 16,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "robe",
+   "name": "Long robe",
+   "col": 6,
+   "row": 2,
+   "sh": 15,
+   "hem": 29
+  },
+  {
+   "slot": "chest",
+   "id": "gown",
+   "name": "Tiered gown & stole",
+   "col": 7,
+   "row": 2,
+   "sh": 15,
+   "hem": 31
+  },
+  {
+   "slot": "chest",
+   "id": "tunic",
+   "name": "Plain tunic",
+   "col": 8,
+   "row": 2,
+   "sh": 15,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "leatherarmor",
+   "name": "Studded leather",
+   "col": 9,
+   "row": 2,
+   "sh": 17,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "chainK",
+   "name": "Hauberk & tabard",
+   "col": 10,
+   "row": 2,
+   "sh": 17,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "shortrobe",
+   "name": "Short robe",
+   "col": 11,
+   "row": 2,
+   "sh": 15,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "simplerobe",
+   "name": "Adept robe",
+   "col": 0,
+   "row": 3,
+   "sh": 15,
+   "hem": 27
+  },
+  {
+   "slot": "chest",
+   "id": "habit",
+   "name": "Acolyte habit",
+   "col": 1,
+   "row": 3,
+   "sh": 15,
+   "hem": 21
+  },
+  {
+   "slot": "chest",
+   "id": "vestment",
+   "name": "Priest vestment",
+   "col": 2,
+   "row": 3,
+   "sh": 15,
+   "hem": 27
+  },
+  {
+   "slot": "chest",
+   "id": "brigandine",
+   "name": "Brigandine",
+   "col": 3,
+   "row": 3,
+   "sh": 15,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "lamellar",
+   "name": "Shadow lamellar",
+   "col": 4,
+   "row": 3,
+   "sh": 16,
+   "hem": 7
+  },
+  {
+   "slot": "chest",
+   "id": "gambeson",
+   "name": "Quilted gambeson",
+   "col": 5,
+   "row": 3,
+   "sh": 17,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "scaleplate",
+   "name": "Dragon scale & breastplate",
+   "col": 6,
+   "row": 3,
+   "sh": 17,
+   "hem": 0
+  },
+  {
+   "slot": "chest",
+   "id": "darktunic",
+   "name": "Patched tunic",
+   "col": 7,
+   "row": 3,
+   "sh": 15,
+   "hem": 0
+  },
+  {
+   "slot": "arms",
+   "id": "gauntlets",
+   "name": "Vambraces & gauntlets",
+   "col": 8,
+   "row": 3,
+   "sh": 22,
+   "hem": 0
+  },
+  {
+   "slot": "arms",
+   "id": "bracers",
+   "name": "Leather bracers",
+   "col": 9,
+   "row": 3,
+   "sh": 3,
+   "hem": 0
+  },
+  {
+   "slot": "arms",
+   "id": "bell",
+   "name": "Bell sleeves",
+   "col": 10,
+   "row": 3,
+   "sh": 22,
+   "hem": 0
+  },
+  {
+   "slot": "arms",
+   "id": "sleeves",
+   "name": "Long sleeves",
+   "col": 11,
+   "row": 3,
+   "sh": 22,
+   "hem": 0
+  },
+  {
+   "slot": "arms",
+   "id": "mail",
+   "name": "Mail sleeves",
+   "col": 0,
+   "row": 4,
+   "sh": 22,
+   "hem": 0
+  },
+  {
+   "slot": "arms",
+   "id": "magesleeves",
+   "name": "Straight sleeves",
+   "col": 1,
+   "row": 4,
+   "sh": 22,
+   "hem": 0
+  },
+  {
+   "slot": "arms",
+   "id": "woolsleeves",
+   "name": "Wool sleeves",
+   "col": 2,
+   "row": 4,
+   "sh": 22,
+   "hem": 0
+  },
+  {
+   "slot": "legs",
+   "id": "greaves",
+   "name": "Plate greaves",
+   "col": 3,
+   "row": 4,
+   "sh": 0,
+   "hem": 23
+  },
+  {
+   "slot": "legs",
+   "id": "leggings",
+   "name": "Leggings & tall boots",
+   "col": 4,
+   "row": 4,
+   "sh": 0,
+   "hem": 22
+  },
+  {
+   "slot": "legs",
+   "id": "wraps",
+   "name": "Wrapped trousers",
+   "col": 5,
+   "row": 4,
+   "sh": 0,
+   "hem": 22
+  },
+  {
+   "slot": "legs",
+   "id": "trousers",
+   "name": "Cloth trousers",
+   "col": 6,
+   "row": 4,
+   "sh": 0,
+   "hem": 22
+  },
+  {
+   "slot": "legs",
+   "id": "chausses",
+   "name": "Mail chausses",
+   "col": 7,
+   "row": 4,
+   "sh": 0,
+   "hem": 22
+  },
+  {
+   "slot": "back",
+   "id": "cape",
+   "name": "Long cape",
+   "col": 8,
+   "row": 4,
+   "sh": 15,
+   "hem": 18
+  },
+  {
+   "slot": "back",
+   "id": "quiver",
+   "name": "Quiver",
+   "col": 9,
+   "row": 4,
+   "sh": 7,
+   "hem": 0
+  },
+  {
+   "slot": "back",
+   "id": "scarf",
+   "name": "Trailing scarf",
+   "col": 10,
+   "row": 4,
+   "sh": 12,
+   "hem": 0
+  },
+  {
+   "slot": "back",
+   "id": "cloak",
+   "name": "Short cloak",
+   "col": 11,
+   "row": 4,
+   "sh": 15,
+   "hem": 0
+  },
+  {
+   "slot": "back",
+   "id": "wardencloak",
+   "name": "Warden cloak",
+   "col": 0,
+   "row": 5,
+   "sh": 15,
+   "hem": 19
+  },
+  {
+   "slot": "back",
+   "id": "longscarf",
+   "name": "Long scarf",
+   "col": 1,
+   "row": 5,
+   "sh": 12,
+   "hem": 3
+  },
+  {
+   "slot": "back",
+   "id": "dragoncape",
+   "name": "Dragon cape",
+   "col": 2,
+   "row": 5,
+   "sh": 16,
+   "hem": 20
+  },
+  {
+   "slot": "main",
+   "id": "sword",
+   "name": "Longsword",
+   "col": 3,
+   "row": 5,
+   "sh": 8,
+   "hem": 0
+  },
+  {
+   "slot": "main",
+   "id": "staff",
+   "name": "Orb staff",
+   "col": 4,
+   "row": 5,
+   "sh": 8,
+   "hem": 7
+  },
+  {
+   "slot": "main",
+   "id": "sceptre",
+   "name": "Sun sceptre",
+   "col": 5,
+   "row": 5,
+   "sh": 12,
+   "hem": 0
+  },
+  {
+   "slot": "main",
+   "id": "dagger",
+   "name": "Dagger",
+   "col": 6,
+   "row": 5,
+   "sh": 4,
+   "hem": 0
+  },
+  {
+   "slot": "main",
+   "id": "spear",
+   "name": "Dragoon spear",
+   "col": 7,
+   "row": 5,
+   "sh": 8,
+   "hem": 0
+  },
+  {
+   "slot": "main",
+   "id": "rod",
+   "name": "Apprentice rod",
+   "col": 8,
+   "row": 5,
+   "sh": 7,
+   "hem": 0
+  },
+  {
+   "slot": "main",
+   "id": "mace",
+   "name": "Flanged mace",
+   "col": 9,
+   "row": 5,
+   "sh": 9,
+   "hem": 0
+  },
+  {
+   "slot": "main",
+   "id": "dragonspear",
+   "name": "Dragon lance",
+   "col": 10,
+   "row": 5,
+   "sh": 9,
+   "hem": 0
+  },
+  {
+   "slot": "off",
+   "id": "shield",
+   "name": "Kite shield",
+   "col": 11,
+   "row": 5,
+   "sh": 13,
+   "hem": 0
+  },
+  {
+   "slot": "off",
+   "id": "bow",
+   "name": "Longbow",
+   "col": 0,
+   "row": 6,
+   "sh": 7,
+   "hem": 5
+  },
+  {
+   "slot": "off",
+   "id": "dagger",
+   "name": "Off-hand dagger",
+   "col": 1,
+   "row": 6,
+   "sh": 4,
+   "hem": 0
+  },
+  {
+   "slot": "off",
+   "id": "buckler",
+   "name": "Buckler",
+   "col": 2,
+   "row": 6,
+   "sh": 4,
+   "hem": 0
+  },
+  {
+   "slot": "off",
+   "id": "shortbow",
+   "name": "Short bow",
+   "col": 3,
+   "row": 6,
+   "sh": 7,
+   "hem": 0
+  },
+  {
+   "slot": "off",
+   "id": "greatbow",
+   "name": "Recurve greatbow",
+   "col": 4,
+   "row": 6,
+   "sh": 6,
+   "hem": 6
+  },
+  {
+   "slot": "off",
+   "id": "tome",
+   "name": "Prayer book",
+   "col": 5,
+   "row": 6,
+   "sh": 0,
+   "hem": 0
+  },
+  {
+   "slot": "off",
+   "id": "offsword",
+   "name": "Off-hand sword",
+   "col": 6,
+   "row": 6,
+   "sh": 4,
+   "hem": 0
+  },
+  {
+   "slot": "off",
+   "id": "offmace",
+   "name": "Off-hand mace",
+   "col": 7,
+   "row": 6,
+   "sh": 9,
+   "hem": 0
+  }
+ ],
+ "classes": {
+  "knight": {
+   "name": "Knight",
+   "shape": "V",
+   "body": "m",
+   "tiers": [
+    [
+     "Squire",
+     "Leather",
+     {
+      "head": "leathercap",
+      "shoulders": "leatherpads",
+      "chest": "leatherarmor",
+      "arms": "bracers",
+      "legs": "trousers",
+      "main": "sword",
+      "off": "buckler"
+     }
+    ],
+    [
+     "Sergeant",
+     "Chain",
+     {
+      "head": "coif",
+      "shoulders": "halfpauldrons",
+      "chest": "chainK",
+      "arms": "mail",
+      "legs": "chausses",
+      "main": "sword",
+      "off": "shield"
+     }
+    ],
+    [
+     "Knight",
+     "Plate",
+     {
+      "head": "greathelm",
+      "shoulders": "pauldrons",
+      "chest": "plate",
+      "arms": "gauntlets",
+      "legs": "greaves",
+      "back": "cape",
+      "main": "sword",
+      "off": "shield"
+     }
+    ]
+   ]
+  },
+  "mage": {
+   "name": "Mage",
+   "shape": "A",
+   "body": "f",
+   "tiers": [
+    [
+     "Apprentice",
+     "Cloth",
+     {
+      "head": "cap",
+      "chest": "shortrobe",
+      "arms": "magesleeves",
+      "legs": "trousers",
+      "main": "rod"
+     }
+    ],
+    [
+     "Adept",
+     "Robe",
+     {
+      "head": "magehood",
+      "chest": "simplerobe",
+      "arms": "magesleeves",
+      "main": "staff"
+     }
+    ],
+    [
+     "Archmage",
+     "Regalia",
+     {
+      "head": "wizhat",
+      "shoulders": "collar",
+      "chest": "robe",
+      "arms": "bell",
+      "main": "staff"
+     }
+    ]
+   ]
+  },
+  "archer": {
+   "name": "Archer",
+   "shape": "I",
+   "body": "f",
+   "tiers": [
+    [
+     "Hunter",
+     "Cloth",
+     {
+      "head": "huntercap",
+      "chest": "tunic",
+      "legs": "leggings",
+      "back": "quiver",
+      "off": "shortbow"
+     }
+    ],
+    [
+     "Ranger",
+     "Leather",
+     {
+      "head": "hood",
+      "chest": "jerkin",
+      "arms": "bracers",
+      "legs": "leggings",
+      "back": "quiver",
+      "off": "bow"
+     }
+    ],
+    [
+     "Warden",
+     "Brigandine",
+     {
+      "head": "falconhelm",
+      "shoulders": "leatherpads",
+      "chest": "brigandine",
+      "arms": "bracers",
+      "legs": "leggings",
+      "back": "wardencloak",
+      "off": "greatbow"
+     }
+    ]
+   ]
+  },
+  "thief": {
+   "name": "Thief",
+   "shape": "/",
+   "body": "m",
+   "tiers": [
+    [
+     "Footpad",
+     "Rags",
+     {
+      "head": "bandana",
+      "chest": "darktunic",
+      "legs": "wraps",
+      "main": "dagger"
+     }
+    ],
+    [
+     "Rogue",
+     "Leather",
+     {
+      "head": "cowl",
+      "chest": "garb",
+      "arms": "bracers",
+      "legs": "wraps",
+      "back": "scarf",
+      "main": "dagger",
+      "off": "dagger"
+     }
+    ],
+    [
+     "Shadow",
+     "Lamellar",
+     {
+      "head": "shadowmask",
+      "shoulders": "darkpads",
+      "chest": "lamellar",
+      "arms": "bracers",
+      "legs": "wraps",
+      "back": "longscarf",
+      "main": "dagger",
+      "off": "dagger"
+     }
+    ]
+   ]
+  },
+  "cleric": {
+   "name": "Cleric",
+   "shape": "A",
+   "body": "f",
+   "tiers": [
+    [
+     "Acolyte",
+     "Habit",
+     {
+      "chest": "habit",
+      "arms": "woolsleeves",
+      "off": "tome"
+     }
+    ],
+    [
+     "Priest",
+     "Vestment",
+     {
+      "head": "veil",
+      "shoulders": "mantle",
+      "chest": "vestment",
+      "arms": "sleeves",
+      "main": "mace",
+      "off": "tome"
+     }
+    ],
+    [
+     "High Priest",
+     "Regalia",
+     {
+      "head": "mitre",
+      "shoulders": "mantle",
+      "chest": "gown",
+      "arms": "sleeves",
+      "main": "sceptre"
+     }
+    ]
+   ]
+  },
+  "lancer": {
+   "name": "Lancer",
+   "shape": "I",
+   "body": "m",
+   "tiers": [
+    [
+     "Militia",
+     "Padded",
+     {
+      "head": "kettle",
+      "chest": "gambeson",
+      "legs": "trousers",
+      "main": "spear"
+     }
+    ],
+    [
+     "Dragoon",
+     "Chain",
+     {
+      "head": "winghelm",
+      "shoulders": "spaulders",
+      "chest": "chain",
+      "arms": "gauntlets",
+      "legs": "greaves",
+      "back": "cloak",
+      "main": "spear"
+     }
+    ],
+    [
+     "Dragon Knight",
+     "Scale",
+     {
+      "head": "winghelm",
+      "shoulders": "spaulders",
+      "chest": "scaleplate",
+      "arms": "gauntlets",
+      "legs": "greaves",
+      "back": "dragoncape",
+      "main": "dragonspear"
+     }
+    ]
+   ]
+  }
+ }
+}
