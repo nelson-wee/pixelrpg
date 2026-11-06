@@ -1560,3 +1560,79 @@ console.log("ok", mapInfo);
   s3.png("dual.png");
   LW = CW; LOX = 0;
 }
+
+// ---------- combat clips: our attack poses + pixelfx effects, timed by each effect's own act ----------
+// Each clip is one horizontal strip at 15 fps. The effect starts so that its first hit lands on our strike frame,
+// and every hit stops the whole picture (unit, effect, target) for the effect's own hit-stop time.
+{
+  const fxl = await import(pathToFileURL(`${LIB}/tools/lib/fxlib.mjs`).href);
+  const FPS = 15;
+  const fxCache = {};
+  async function fxFrames(id, options = {}) {
+    const key = id + JSON.stringify(options);
+    if (fxCache[key]) return fxCache[key];
+    const fx = await fxl.loadEffect(id, `${LIB}/src/fx`);
+    const r = fxl.renderFrames(fx, { fps: FPS, bg: "none", actor: false, options });
+    const timing = fx.mod.act ? actTimingOf(fx.mod) : null;
+    return (fxCache[key] = { w: r.w, h: r.h, frames: r.frames.map((f) => f.clear), pivot: fx.meta.origin, loop: fx.meta.loop, hits: timing?.hits ?? [] });
+  }
+  function actTimingOf(mod) { return { hits: (mod.act.hits ?? []).map((h) => ({ t: h.t, freeze: h.stop ?? 0 })) }; }
+  const blitFx = (cv, F, i, x, y) => { if (i < 0 || i >= F.frames.length) return; cv.paste(F.frames[i], F.w, F.h, Math.round(x - F.pivot[0]), Math.round(y - F.pivot[1])); };
+  const unitAt = (cv, img, fx, fy) => cv.paste(img.rgba(), img.w, img.h, fx - 48, fy - 72);
+  // drawing coordinates of a rig point -> clip coordinates, for a unit whose feet are at (fx, fy)
+  const toClip = (p, fx, fy) => [fx + p[0] - 24, fy + p[1] - 60];
+  const meta = {};
+
+  LW = 96; LOX = 24;
+  async function clip(name, { lo, body, W, H, ux, uy, tx, ty, melee, proj }) {
+    const st = stanceOf(lo), poses = [0, 1, 2, 3].map((p) => dress(lo, "front", 0, body, null, st, p));
+    const slime = await fxFrames("critters/slime");
+    // pose timeline: ready 4, wind-up 5, strike 3, follow 5, then ready
+    const S0 = 9, poseAt = (f) => (f < 4 ? 0 : f < S0 ? 1 : f < S0 + 3 ? 2 : f < S0 + 8 ? 3 : 0);
+    let E, I, startE = 0, hitF = S0, freeze = 2, path = null, impact = null, arriveF = S0;
+    if (melee) {
+      E = await fxFrames(melee.id, melee.opts);
+      const h0 = E.hits[0] ?? { t: 0.06, freeze: 0.1 };
+      startE = S0 - Math.round(h0.t * FPS); hitF = S0; freeze = Math.max(1, Math.round(h0.freeze * FPS));
+      if (melee.impact) I = await fxFrames(melee.impact.id, melee.impact.opts);
+    } else {
+      const K = rig("front", 0, body, st, 2), L = toClip(proj.from === "off" ? K.off.h : K.main.h, ux, uy), T = [tx, ty - 16];
+      const dist = Math.hypot(T[0] - L[0], T[1] - L[1]), n = Math.max(3, Math.ceil(dist / proj.speed));
+      const ang = Math.atan2(T[1] - L[1], T[0] - L[0]);
+      E = await fxFrames(proj.id, { ...(proj.opts ?? {}), angle: ang });
+      I = await fxFrames(proj.impact.id, proj.impact.opts);
+      path = { L, T, n }; arriveF = S0 + n; hitF = arriveF; freeze = 2;
+    }
+    const effLen = melee ? E.frames.length : 0, impLen = I ? I.frames.length : 0;
+    const total = Math.max(S0 + 12, (melee ? startE + effLen : arriveF + impLen)) + 3;
+    // build the frame list with the hit-stop: the picture at hitF repeats `freeze` times
+    const seq = [];
+    for (let f = 0; f < total; f++) { seq.push({ f, frozen: false }); if (f === hitF) for (let k = 0; k < freeze; k++) seq.push({ f, frozen: true }); }
+    const cv = fxl.canvas(W * seq.length, H, [0, 0, 0, 0]);
+    seq.forEach(({ f, frozen }, i) => {
+      const one = fxl.canvas(W, H, [0, 0, 0, 0]);
+      const hitAge = f - hitF, shake = hitAge >= 0 && hitAge < 3 ? (frozen ? 2 : hitAge === 0 ? 2 : 1) : 0;
+      blitFx(one, slime, f % slime.frames.length, tx + shake, ty);
+      unitAt(one, poses[poseAt(f)], ux, uy);
+      if (melee) { blitFx(one, E, f - startE, ux + melee.dx, uy + melee.dy); if (I) blitFx(one, I, f - hitF, tx + (melee.impact.dx ?? 0), ty); }
+      else {
+        if (f >= S0 && f < arriveF) { const t = (f - S0) / path.n, x = path.L[0] + (path.T[0] - path.L[0]) * t, y = path.L[1] + (path.T[1] - path.L[1]) * t; blitFx(one, E, (f - S0) % E.frames.length, x, y); }
+        blitFx(one, I, f - arriveF, tx + (proj.impact.dx ?? 0), ty + (proj.impact.dy ?? 0));
+      }
+      cv.paste(one.data, W, H, i * W, 0);
+    });
+    writeFileSync(`${OUT}/combat-${name}.png`, cv.png());
+    meta[name] = { w: W, h: H, frames: seq.length, fps: FPS, hitFrame: hitF + 0, freeze, effect: melee?.id ?? proj.id, impact: melee?.impact?.id ?? proj?.impact?.id ?? null };
+  }
+  const C = CLASSES;
+  await clip("knight-slash", { lo: C.knight.loadout, body: C.knight.body, W: 208, H: 120, ux: 60, uy: 100, tx: 128, ty: 108, melee: { id: "melee/sword-slash", opts: { radius: 50, angle: 0.25 }, dx: 12, dy: -6 } });
+  await clip("knight-greatsword", { lo: KNIGHT_GS, body: C.knight.body, W: 208, H: 120, ux: 60, uy: 100, tx: 128, ty: 108, melee: { id: "melee/heavy-cleave", opts: { angle: 0.2 }, dx: 2, dy: -6 } });
+  await clip("thief-x", { lo: C.thief.loadout, body: C.thief.body, W: 208, H: 120, ux: 60, uy: 100, tx: 124, ty: 108, melee: { id: "melee/double-slash", opts: { angle: 0.2 }, dx: 0, dy: -6 } });
+  await clip("lancer-thrust", { lo: C.lancer.loadout, body: C.lancer.body, W: 208, H: 120, ux: 52, uy: 100, tx: 140, ty: 108, melee: { id: "melee/thrust", opts: { reach: 74, angle: -0.08 }, dx: 0, dy: -4 } });
+  await clip("lancer-phalanx", { lo: LANCER_PH, body: C.lancer.body, W: 208, H: 120, ux: 52, uy: 100, tx: 136, ty: 108, melee: { id: "melee/thrust", opts: { reach: 66, angle: 0.05 }, dx: 0, dy: -12 } });
+  await clip("mage-fireball", { lo: C.mage.loadout, body: C.mage.body, W: 256, H: 210, ux: 48, uy: 100, tx: 196, ty: 150, proj: { id: "fire/fireball", from: "off", speed: 16, impact: { id: "explosions/plasma-explosion", dy: -14, opts: { palette: ["#1e0c14", "#6e1c34", "#b0303e", "#e0604e", "#f0c85a", "#fff2b0", "#ffffff"], accent: ["#3a1428", "#6e1c34", "#e0604e", "#f6a07a", "#ffe0b8"] } } } });
+  await clip("archer-arrow", { lo: C.archer.loadout, body: C.archer.body, W: 256, H: 150, ux: 48, uy: 92, tx: 196, ty: 134, proj: { id: "projectiles/arrow", from: "off", speed: 24, impact: { id: "impacts/hit-spark", opts: { height: 14 }, dx: -6, dy: 0 } } });
+  LW = CW; LOX = 0;
+  writeFileSync(`${OUT}/combat.json`, JSON.stringify(meta, null, 1));
+  console.log("combat clips", meta);
+}

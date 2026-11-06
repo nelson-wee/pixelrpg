@@ -54,6 +54,7 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 - **Stances:** the equipped weapon selects the stance: guard, caster, archer, dual wield, lancer, greatsword, or spear and shield. Units face SE (front) or NW (back), with the feet on the tile diagonal.
 - **Two-handed weapons:** the greatsword, the spear and the dragon lance use both hands, so the off-hand layer is not drawn. The short spear is one-handed and goes with a shield. It uses the guard ready pose and has its own thrust attack.
 - **Attacks:** 4 frames (ready 560 ms, wind-up 320 ms, strike 200 ms, follow-through 350 ms) in a 96 × 76 px cell, with the feet at (48, 72).
+- **Effects on attacks:** an effect starts so that its own `act` hit time lands on our strike frame. On the hit, the whole picture freezes for the effect's hit-stop. Melee effects tilt 0.2–0.25 rad down to face SE. Projectiles start at the releasing hand on the strike frame and fly to the target's body centre (16 px above its feet), at 24 px per frame for arrows and 16 px per frame for spells.
 - **Tiles:** 48 × 24 px on a 2:1 grid, with 12 px for each height step. Screen X = (col − row) × 24. Screen Y = (col + row) × 12 − height × 12.
 
 ## Main files in `sprites/art`
@@ -64,6 +65,7 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | `tiers.png` | 6 rows (classes) × 6 columns (T1–T3 male, T1–T3 female) |
 | `attacks.png` | 8 rows × 8 frames of 96 × 76: 4 SE poses, then 4 NW poses. Rows: the 6 classes, then the knight with a greatsword, then the lancer with spear and shield |
 | `atlas-<m\|f>-<stance>.png` | Every gear layer alone, 12 columns of 48 × 76. Cell positions are in `gear.json`. The phalanx (spear and shield) atlas is the same as the guard atlas |
+| `combat-<clip>.png` | Attack clips with pixelfx effects, one row at 15 fps: knight sword, knight greatsword, thief X cut, lancer thrust, lancer spear and shield, mage fireball, archer arrow. Frame size, hit frame and hit-stop are in `combat.json` |
 | `battle-map.png` | The 11 × 11 sample map, 552 × 412 |
 | `tiles-*.png`, `props.png`, `icons.png`, `frame-*.png` | Terrain, height steps, tile markers, props, 16 px icons, 9-slice windows |
 
