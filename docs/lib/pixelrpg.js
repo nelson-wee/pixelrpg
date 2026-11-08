@@ -25,7 +25,38 @@ export const R = {
   parch:  ["#3a2a22", "#6e4e36", "#c4a07a", "#ead6b0", "#fbf2dc"],
   ivory:  ["#4a3e4e", "#8a7e8c", "#c8bec4", "#ece6e0", "#fffcf4"],
   teal:   ["#10283a", "#18485a", "#24706e", "#3ca08a", "#8ad4b0"],
+  grey:   ["#2c2a30", "#5c5a60", "#8e8c92", "#c0bec2", "#ecebea"],
 };
+// Two looks share every shape. "classic": saturated ramps, hard cel bands, colored outlines.
+// "muted": natural, desaturated ramps with near-black step 0 (dark outlines), dithered soft shading,
+// a smaller head and a 4 px taller body.
+const RAMPS_CLASSIC = JSON.parse(JSON.stringify(R));
+const RAMPS_MUTED = {
+  ink:     ["#0e0a0e", "#221a22", "#363038", "#524a52", "#766c74"],
+  skin:    ["#2a1714", "#84553f", "#b47c63", "#d9a585", "#f0cbad"],
+  hair:    ["#1c120e", "#4a3122", "#765234", "#a27a52", "#cbaa80"],
+  hairB:   ["#0c0c14", "#252736", "#3c4056", "#60657c", "#9096aa"],
+  grey:    ["#141216", "#56545a", "#8a888e", "#bebcc0", "#eceae6"],
+  steel:   ["#121419", "#383d49", "#5b6272", "#8890a1", "#c2c8d3"],
+  gold:    ["#211408", "#6a471c", "#9d702c", "#c69746", "#e6c679"],
+  crimson: ["#190a0b", "#561a1b", "#8a2a27", "#b0463a", "#cf7963"],
+  royal:   ["#0b0e1c", "#232e56", "#3a4f83", "#5d79ab", "#98b1d3"],
+  arcane:  ["#120c1c", "#382a55", "#5c4583", "#876cad", "#b9a3d5"],
+  forest:  ["#0b120c", "#253727", "#3c583a", "#607e4c", "#95ab72"],
+  teal:    ["#0a1214", "#1e383a", "#335855", "#557e77", "#8caea4"],
+  ivory:   ["#1e1a17", "#7a7166", "#b0a796", "#d7cebd", "#f1ebde"],
+  leather: ["#170f0b", "#483020", "#6c4931", "#926749", "#bb916f"],
+  stone:   ["#151419", "#3e3d47", "#62606c", "#8d8b95", "#bebbc2"],
+  water:   ["#0c1828", "#1b3a55", "#2c5f7c", "#4c869a", "#88b5ba"],
+  sand:    ["#1f160f", "#6a5038", "#977652", "#bc9c73", "#dcc6a0"],
+  snow:    ["#272c38", "#5f6878", "#97a0ae", "#c8cfd8", "#eef1f4"],
+};
+const STYLE = { name: "classic", dither: false, lift: 0, head: 1 };
+function setStyle(name) {
+  const muted = name === "muted", src = muted ? { ...RAMPS_CLASSIC, ...RAMPS_MUTED } : RAMPS_CLASSIC;
+  for (const k of Object.keys(src)) R[k] = src[k].slice();
+  Object.assign(STYLE, { name: muted ? "muted" : "classic", dither: muted, lift: muted ? 4 : 0, head: muted ? 0.88 : 1 });
+}
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
 // ---------- a simple indexed canvas ----------
@@ -55,7 +86,13 @@ const P = (r, i) => ({ r, i });
 
 // light from top-left, toward the viewer
 const L = (() => { const v = [-0.55, -0.65, 0.52]; const m = Math.hypot(...v); return v.map((x) => x / m); })();
-const band = (d, bands = [0.8, 0.45, 0.05]) => (d > bands[0] ? 4 : d > bands[1] ? 3 : d > bands[2] ? 2 : 1);
+const DITHER4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+function band(d, x, y) {
+  if (!STYLE.dither || x === undefined) return d > 0.8 ? 4 : d > 0.45 ? 3 : d > 0.05 ? 2 : 1;
+  // continuous level with band centres at 1.5, 2.5, 3.5, then a 4x4 ordered dither across each edge
+  const lv = 1.5 + (d - 0.05) / 0.375, t = (DITHER4[((Math.round(y) % 4) + 4) % 4][((Math.round(x) % 4) + 4) % 4] - 7.5) / 16;
+  return Math.max(1, Math.min(4, Math.floor(lv + t * 0.9)));
+}
 
 // shaded ellipse (sphere-ish)
 function ell(img, cx, cy, rx, ry, r, o = {}) {
@@ -65,7 +102,7 @@ function ell(img, cx, cy, rx, ry, r, o = {}) {
     if (o.clip && !o.clip(x, y)) continue;
     const nz = Math.sqrt(1 - q);
     const d = nx * L[0] + ny * L[1] + nz * L[2];
-    img.set(x, y, P(r, Math.min(o.max ?? 4, band(d + (o.bias ?? 0)))));
+    img.set(x, y, P(r, Math.min(o.max ?? 4, band(d + (o.bias ?? 0), x, y))));
   }
 }
 // shaded vertical cylinder-ish box: x0..x1, y0..y1
@@ -76,7 +113,7 @@ function box(img, x0, y0, x1, y1, r, o = {}) {
     const ny = o.flat ? -0.2 : ((y + 0.5 - y0) / (y1 - y0 + 1)) * 0.8 - 0.4;
     const nz = Math.sqrt(Math.max(0, 1 - nx * nx * 0.9));
     const d = nx * L[0] + ny * L[1] + nz * L[2];
-    img.set(x, y, P(r, Math.min(o.max ?? 4, band(d + (o.bias ?? 0)))));
+    img.set(x, y, P(r, Math.min(o.max ?? 4, band(d + (o.bias ?? 0), x, y))));
   }
 }
 // filled polygon with a fixed ramp index function
@@ -121,7 +158,7 @@ function shadow(img, cx, cy, rx, ry) {
 // ---------- characters v2: layered paper-doll sprites, 48x76 cell, feet at (24,72) ----------
 // Drawing coordinates: feet on y = 60; the Layer adds OY0 so hats, crests and spears have headroom.
 const CW = 48, CH = 76, FX = 24, FY = 72, OY0 = 12;
-const INK0 = R.ink[0], INK1 = R.ink[1];
+
 let LW = CW, LOX = 0; // layer canvas width and x offset: 48/0 normally, 96/24 for attack frames
 class Layer extends Img {
   constructor() { super(LW, CH); }
@@ -149,7 +186,7 @@ function lathe(img, y0, y1, cx, hw, r, o = {}) {
       const nx = (x + 0.5 - c) / w; if (Math.abs(nx) > 1) continue;
       if (o.clip && !o.clip(x, y)) continue;
       const nz = Math.sqrt(Math.max(0, 1 - nx * nx * 0.92)), ny = o.ny ?? -0.2;
-      img.set(x, y, P(r, Math.min(o.max ?? 4, band(nx * L[0] + ny * L[1] + nz * L[2] + (o.bias ?? 0)))));
+      img.set(x, y, P(r, Math.min(o.max ?? 4, band(nx * L[0] + ny * L[1] + nz * L[2] + (o.bias ?? 0), x, y))));
     }
   }
 }
@@ -164,7 +201,7 @@ function capsule(img, ax, ay, bx, by, ra, rb, r, o = {}) {
       if (q > 1) continue;
       if (o.clip && !o.clip(x, y)) continue;
       const nx = ex / rr, ny = ey / rr, nz = Math.sqrt(Math.max(0, 1 - q));
-      img.set(x, y, P(r, Math.min(o.max ?? 4, band(nx * L[0] + ny * L[1] + nz * L[2] + (o.bias ?? 0)))));
+      img.set(x, y, P(r, Math.min(o.max ?? 4, band(nx * L[0] + ny * L[1] + nz * L[2] + (o.bias ?? 0), x, y))));
     }
 }
 // recolor this layer's pixels on a row (trims, belts, bands)
@@ -237,7 +274,7 @@ function stanceOf(lo = {}) {
 function rig(view, bob, body = {}, stance = "guard", pose = 0) {
   const S0 = STANCES[stance] ?? STANCES.guard, A = (pose && ATK[stance]?.[pose - 1]) || {};
   const S = { ...S0, ...A, main: A.main ?? S0.main, off: A.off ?? S0.off, crouch: S0.crouch + (A.dc ?? 0), step: A.step ?? 0 }, f = view === "front", fem = body.type === "f", n = fem ? 0.6 : 0;
-  const b = bob + S.crouch, d = f ? 1 : -1, mx = (x) => (f ? x : 49 - x);
+  const b = bob + S.crouch - STYLE.lift, d = f ? 1 : -1, mx = (x) => (f ? x : 49 - x);
   const shift = S.step * 0.5 * d, at = ([x, y]) => [mx(x) + shift, y + b];
   const main = { s: at([18.6 + n, 21.8 + n * 0.6]), e: at(S.main.e), h: at(S.main.h) };
   const off = { s: at([30.4 - n, 21.2 + n * 0.6]), e: at(S.off.e), h: at(S.off.h) };
@@ -279,17 +316,23 @@ function drawBase(img, K, o = {}) {
   lathe(img, 19 + b, 37 + b, K.tx, tw, under);
   if (fem && f) rowTint(img, 25 + b, 20, 31, (x, v) => P(under, Math.max(1, v.i - 1)));
   capsule(img, K.tx(15 + b), 15 + b, K.tx(19 + b), 19 + b, fem ? 1.7 : 2, fem ? 1.9 : 2.2, "skin", { bias: -0.3 });
-  ell(img, hx, hy, fem ? 4.6 : 4.8, fem ? 5.4 : 5.5, f ? "skin" : hair);
+  const hs = STYLE.head, hrx = (fem ? 4.6 : 4.8) * hs;
+  ell(img, hx, hy, hrx, (fem ? 5.4 : 5.5) * hs, f ? "skin" : hair);
   if (f) {
-    ell(img, hx - 0.9, hy - 2.3, 5.6, 4.3, hair, { clip: (x, y) => y + 0.5 < hy - 1.5 || x + 0.5 < hx - 1.2 });
+    ell(img, hx - 0.9, hy - 2.3 * hs, 5.6 * hs, 4.3 * hs, hair, { clip: (x, y) => y + 0.5 < hy - 1.5 * hs || x + 0.5 < hx - 1.2 });
     img.set(hx + 1.6, hy - 1.5, P(hair, 3)); img.set(hx + 3.4, hy - 1.5, P(hair, 2));
-    for (const ex of [hx + 1.2, hx + 3.7]) { img.set(ex, hy + 0.5, { hex: INK0 }); img.set(ex, hy + 1.5, { hex: INK0 }); }
-    if (fem) { img.set(hx + 0.2, hy + 0.5, { hex: INK1 }); img.set(hx + 4.6, hy + 0.5, { hex: INK1 }); }
+    for (const ex of [hx + 1.2, hx + 3.7]) { img.set(ex, hy + 0.5, P("ink", 0)); img.set(ex, hy + 1.5, P("ink", 0)); }
+    if (fem) { img.set(hx + 0.2, hy + 0.5, P("ink", 1)); img.set(hx + 4.6, hy + 0.5, P("ink", 1)); }
     img.set(hx + 3, hy + 3.6, fem ? P("crimson", 3) : P("skin", 1));
-    img.set(hx + 5.1, hy + 2, P("skin", 3)); img.set(hx - 1.4, hy + 1, P("skin", 2));
-    if (fem) capsule(img, hx - 3.6, hy - 1, hx - 4, hy + 6, 1.2, 1.1, hair);
+    img.set(hx + hrx + 0.3, hy + 2, P("skin", 3)); img.set(hx - 1.4, hy + 1, P("skin", 2));
+    if (fem) capsule(img, hx - 3.6 * hs, hy - 1, hx - 4 * hs, hy + 6, 1.2, 1.1, hair);
+    if (o.beard && !fem) { // full beard and moustache in the hair colour
+      ell(img, hx + 1.8, hy + 4.4 * hs, 3.4 * hs, 3.2 * hs, hair, { clip: (x, y) => y + 0.5 > hy + 2.4 * hs, bias: 0.1 });
+      for (let x = hx + 0.8; x <= hx + 4.2; x++) img.set(x, hy + 2.8 * hs, P(hair, 3));
+      img.set(hx + 3, hy + 3.6, P("ink", 1));
+    }
   } else {
-    ell(img, hx, hy - 0.6, 5.2, 5.6, hair);
+    ell(img, hx, hy - 0.6, 5.2 * hs, 5.6 * hs, hair);
     for (let y = hy - 3; y <= hy + 3; y += 2) img.set(hx - 1.5 * K.d, y, P(hair, 2));
   }
 }
@@ -456,8 +499,8 @@ const GEAR = {
       const { hx, hy, f, d } = K;
       lathe(img, hy - 7, hy + 6, hx - 0.2, pw([[hy - 7, 3.8], [hy - 5.5, 5.6], [hy + 6, 5.6]]), "steel");
       if (f) {
-        for (let x = hx - 0.5; x <= hx + 5.4; x++) img.set(x, hy + 0.5, { hex: INK0 });
-        for (const x of [hx + 2, hx + 4]) for (const y of [hy + 3, hy + 4.2]) img.set(x, y, { hex: INK1 });
+        for (let x = hx - 0.5; x <= hx + 5.4; x++) img.set(x, hy + 0.5, P("ink", 0));
+        for (const x of [hx + 2, hx + 4]) for (const y of [hy + 3, hy + 4.2]) img.set(x, y, P("ink", 1));
         for (let y = hy - 6; y <= hy + 5; y++) if (Math.round(y) !== Math.round(hy + 0.5)) img.set(hx + 1.6, y, P("steel", 4));
       }
       const pts = [[0, -6.5], [-0.6, -10.5], [-3, -13], [-6.5, -13.2], [-9.5, -11], [-11, -7]];
@@ -674,14 +717,18 @@ Object.assign(GEAR.shoulders, {
     }
   } },
 });
-function chainShirt(sur) {
+function chainShirt(sur, cross) {
   return (img, K) => {
     const { b } = K;
     lathe(img, 18.5 + b, 45, K.tx, pw([[18.5 + b, 5.8], [21 + b, 7.2], [31 + b, 6], [37, 6.8], [45, 8.4]]), "steel");
     ringTex(img, 18 + b, 46, "steel");
     lathe(img, 20 + b, 47, K.tx, pw([[20 + b, 3.6], [33 + b, 3.2], [47, 4.4]]), sur, { bias: 0.1 });
     rowTint(img, 33 + b, 17, 32, (x) => P("leather", x < 23 ? 3 : 2));
-    if (K.f) { img.set(24, 27 + b, P("gold", 4)); img.set(25, 27 + b, P("gold", 3)); img.set(24.5, 26 + b, P("gold", 4)); img.set(24.5, 28 + b, P("gold", 2)); }
+    if (cross) { // a cross on the surcoat, front and back
+      const cx = K.tx(27 + b) + 0.1 * K.d;
+      for (let y = 23 + b; y <= 33 + b; y++) { img.set(cx - 0.5, y, P(cross, 3)); img.set(cx + 0.5, y, P(cross, 2)); }
+      for (let x = cx - 2.6; x <= cx + 2.6; x++) img.set(x, 26 + b, P(cross, x < cx ? 3 : 2));
+    } else if (K.f) { img.set(24, 27 + b, P("gold", 4)); img.set(25, 27 + b, P("gold", 3)); img.set(24.5, 26 + b, P("gold", 4)); img.set(24.5, 28 + b, P("gold", 2)); }
   };
 }
 Object.assign(GEAR.chest, {
@@ -692,7 +739,7 @@ Object.assign(GEAR.chest, {
     for (let x = 18; x <= 31; x += 3) for (let y = 35; y < 41; y++) if (img.get(x, y)) img.set(x, y, P("leather", 1));
     rowTint(img, 33 + b, 17, 32, () => P("ink", 3));
   } },
-  chainK: { name: "Hauberk & tabard", draw: chainShirt("crimson") },
+  chainK: { name: "Hauberk & cross surcoat", draw: chainShirt("ivory", "crimson") },
   shortrobe: { name: "Short robe", draw(img, K) {
     const { b, f } = K;
     lathe(img, 18.5 + b, 47, K.tx, pw([[18.5 + b, 5.4], [21 + b, 6.4], [30 + b, 5.8], [47, 8.6]]), "royal");
@@ -998,6 +1045,20 @@ Object.assign(GEAR.back, {
   } },
 });
 
+// a long cloak with a gold edge and a crimson inner line, open at the front
+Object.assign(GEAR.back, {
+  templecloak: { name: "Trimmed long cloak", draw(img, K) {
+    const { b, f } = K; // centred in front, so both edges show beside the body
+    lathe(img, 19 + b, 58, K.tx, f ? pw([[19 + b, 9.2], [58, 14.6]]) : pw([[19 + b, 7.6], [30 + b, 9.2], [58, 10.8]]), "ivory", { bias: f ? -0.25 : 0 });
+    if (!f) for (const k of [-3, 3]) for (let y = 30 + b; y < 57; y++) img.set(K.tx(y) + k, y, P("ivory", 1));
+    for (let y = -12; y < 64; y++) { // gold on the outer edge of each row, crimson one pixel in
+      let a = 99, z = -1; for (let x = -24; x < 72; x++) { const v = img.get(x, y); if (v && v.r === "ivory") { a = Math.min(a, x); z = Math.max(z, x); } }
+      if (z < 0) continue;
+      img.set(a, y, P("gold", 3)); img.set(z, y, P("gold", 2));
+      if (z - a > 6) { img.set(a + 1, y, P("crimson", 3)); img.set(z - 1, y, P("crimson", 2)); }
+    }
+  } },
+});
 const SLOTS = ["head", "shoulders", "chest", "arms", "legs", "back", "main", "off"];
 const ORDER = {
   front: ["back", "hair", "base", "legs", "chest", "limbs", "arms", "shoulders", "head", "off", "main"],
@@ -1387,4 +1448,5 @@ function frame(style) {
   return img;
 }
 
-export { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, INK0, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
+setStyle("muted");
+export { setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };

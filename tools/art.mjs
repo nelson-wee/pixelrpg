@@ -9,7 +9,8 @@ const { encodePNG } = await import(pathToFileURL(`${LIB}/tools/lib/png.mjs`).hre
 mkdirSync(OUT, { recursive: true });
 
 import * as core from "../docs/lib/pixelrpg.js";
-const { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, INK0, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, R, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile, setCell, setPNGWriter } = core;
+const { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, R, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile, setCell, setPNGWriter, setStyle, STYLE } = core;
+setStyle(process.env.STYLE === "classic" ? "classic" : "muted"); // STYLE=classic npm run art for the original look
 setPNGWriter((file, w, h, rgba) => writeFileSync(`${OUT}/${file}`, encodePNG(w, h, rgba)));
 
 
@@ -51,7 +52,7 @@ for (const [tag, body] of [["m", { type: "m", hair: "hair" }], ["f", { type: "f"
   atlas.forEach(([slot, id, name], i) => {
     const img = layerImg(slot, id, "front", 0, body, st);
     s.blit(img, (i % ACOLS) * CW, Math.floor(i / ACOLS) * CH);
-    if (tag === "m" && st === "guard") gearInfo.push({ slot, id, name, col: i % ACOLS, row: Math.floor(i / ACOLS), sh: span(img, 17 + OY0, 27 + OY0), hem: span(img, 50 + OY0, 60 + OY0) });
+    if (tag === "m" && st === "guard") gearInfo.push({ slot, id, name, col: i % ACOLS, row: Math.floor(i / ACOLS), sh: span(img, 17 + OY0 - STYLE.lift, 27 + OY0 - STYLE.lift), hem: span(img, 50 + OY0, 60 + OY0) });
   });
   s.png(`atlas-${tag}-${st}.png`);
 }

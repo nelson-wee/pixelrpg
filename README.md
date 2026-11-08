@@ -58,7 +58,8 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 
 ## The rules in short
 
-- **Palette:** 18 ramps of 5 steps. Dark steps go cooler and light steps go warmer. There are no gradients and no anti-aliasing.
+- **Styles:** two looks share every shape. **Muted** (the default) has natural, desaturated ramps with a near-black step 0, so outlines read dark. It shades with a soft 4 × 4 ordered dither, and units have a smaller head (88%) and a body 4 px taller. **Classic** is the original look: saturated ramps, hard cel bands and coloured outlines. Use `STYLE=classic npm run art` to write the sheets in the classic look; the web viewer has a style toggle.
+- **Palette:** 19 ramps of 5 steps, in two sets (muted and classic). Dark steps go cooler and light steps go warmer. There is no anti-aliasing.
 - **Light:** one light, from the top left. Each shape has an outline in step 0 of its own ramp. Ink (`#2a1f2d`) is used only on the bottom-right edges.
 - **Units:** a 48 × 76 px cell, with the feet at (24, 72). A unit is about 5 heads tall.
 - **Gear:** one base body (male or female) plus 8 slots: head, shoulders, chest, arms, legs, back, main hand and off hand. Each layer has its own outline. There are 79 pieces and 3 tiers for each class.

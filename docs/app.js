@@ -1,19 +1,19 @@
 // Wardrobe viewer: draws a unit live with the sprite core and plays its idle or attack animation.
-import { CLASSES, KNIGHT_GS, LANCER_PH, TWO_HANDED, STANCES, stanceOf, dress, layerImg, setCell, tile, Img, OY0 } from "./lib/pixelrpg.js";
+import { CLASSES, KNIGHT_GS, LANCER_PH, TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0 } from "./lib/pixelrpg.js";
 
 // short chip labels for every piece, by slot
 const SLOTS = [
   ["head", "HEAD", [["greathelm", "Great helm"], ["coif", "Mail coif"], ["leathercap", "Leather cap"], ["winghelm", "Spire helm"], ["kettle", "Kettle hat"], ["wizhat", "Brim hat"], ["magehood", "Pointed hood"], ["cap", "Apprentice cap"], ["mitre", "Mitre"], ["veil", "Veil"], ["hood", "Hood"], ["huntercap", "Feather cap"], ["falconhelm", "Winged helm"], ["cowl", "Cowl"], ["bandana", "Bandana"], ["shadowmask", "Demon mask"]]],
   ["shoulders", "SHOULDERS", [["pauldrons", "Pauldrons"], ["halfpauldrons", "Half pauldrons"], ["leatherpads", "Leather pads"], ["darkpads", "Lacquered pads"], ["spaulders", "Spaulders"], ["mantle", "Mantle"], ["collar", "Collar"]]],
-  ["chest", "CHEST", [["plate", "Plate"], ["chainK", "Hauberk red"], ["chain", "Hauberk teal"], ["leatherarmor", "Studded leather"], ["scaleplate", "Dragon scale"], ["gambeson", "Gambeson"], ["robe", "Archmage robe"], ["simplerobe", "Adept robe"], ["shortrobe", "Short robe"], ["gown", "Gown"], ["vestment", "Vestment"], ["habit", "Habit"], ["brigandine", "Brigandine"], ["jerkin", "Jerkin"], ["tunic", "Tunic"], ["garb", "Garb"], ["lamellar", "Lamellar"], ["darktunic", "Patched tunic"]]],
+  ["chest", "CHEST", [["plate", "Plate"], ["chainK", "Hauberk + cross"], ["chain", "Hauberk teal"], ["leatherarmor", "Studded leather"], ["scaleplate", "Dragon scale"], ["gambeson", "Gambeson"], ["robe", "Archmage robe"], ["simplerobe", "Adept robe"], ["shortrobe", "Short robe"], ["gown", "Gown"], ["vestment", "Vestment"], ["habit", "Habit"], ["brigandine", "Brigandine"], ["jerkin", "Jerkin"], ["tunic", "Tunic"], ["garb", "Garb"], ["lamellar", "Lamellar"], ["darktunic", "Patched tunic"]]],
   ["arms", "ARMS", [["gauntlets", "Gauntlets"], ["mail", "Mail"], ["bracers", "Bracers"], ["bell", "Bell sleeves"], ["magesleeves", "Straight sleeves"], ["sleeves", "Long sleeves"], ["woolsleeves", "Wool sleeves"]]],
   ["legs", "LEGS", [["greaves", "Greaves"], ["chausses", "Chausses"], ["leggings", "Leggings"], ["trousers", "Trousers"], ["wraps", "Wraps"]]],
-  ["back", "BACK", [["cape", "Cape"], ["dragoncape", "Dragon cape"], ["cloak", "Cloak"], ["wardencloak", "Warden cloak"], ["quiver", "Quiver"], ["scarf", "Scarf"], ["longscarf", "Long scarf"]]],
+  ["back", "BACK", [["templecloak", "Trimmed cloak"], ["cape", "Cape"], ["dragoncape", "Dragon cape"], ["cloak", "Cloak"], ["wardencloak", "Warden cloak"], ["quiver", "Quiver"], ["scarf", "Scarf"], ["longscarf", "Long scarf"]]],
   ["main", "MAIN HAND", [["sword", "Sword"], ["greatsword", "Greatsword (2H)"], ["mace", "Mace"], ["dagger", "Dagger"], ["shortspear", "Short spear"], ["spear", "Spear (2H)"], ["dragonspear", "Dragon lance (2H)"], ["staff", "Staff"], ["rod", "Rod"], ["sceptre", "Sceptre"]]],
   ["off", "OFF HAND", [["shield", "Kite shield"], ["buckler", "Buckler"], ["dagger", "Dagger"], ["offsword", "Sword"], ["offmace", "Mace"], ["bow", "Longbow"], ["shortbow", "Short bow"], ["greatbow", "Greatbow"], ["tome", "Book"]]],
 ];
 const KEYS = SLOTS.map(([k]) => k);
-const HAIRS = [["hair", "Brown"], ["crimson", "Red"], ["hairB", "Blue-black"], ["ink", "Black"]];
+const HAIRS = [["hair", "Brown"], ["crimson", "Red"], ["hairB", "Blue-black"], ["ink", "Black"], ["grey", "Grey"]];
 const STANCE_NAMES = { guard: "GUARD", caster: "CASTER", archer: "ARCHER", rogue: "DUAL WIELD", lancer: "LANCER (2H)", greatsword: "GREATSWORD (2H)", phalanx: "SPEAR & SHIELD" };
 // attack frame timing in ms: ready, wind-up, strike, follow-through
 const ATTACK_MS = [560, 320, 200, 350], IDLE_MS = [600, 600];
@@ -23,10 +23,11 @@ const PRESETS = Object.entries(CLASSES).map(([key, k]) => {
   const tiers = k.tiers.map(([name, mat, lo], i) => ({ name, label: `${k.name} · T${i + 1} ${name} (${mat})`, lo, body: k.body }));
   if (key === "knight") tiers.push({ name: "Greatsword", label: "Knight · Greatsword", lo: KNIGHT_GS, body: k.body });
   if (key === "lancer") tiers.push({ name: "Phalanx", label: "Lancer · Spear & shield", lo: LANCER_PH, body: k.body });
+  if (key === "cleric") tiers.push({ name: "Elder", label: "Cleric · Elder (trimmed cloak, beard)", lo: { shoulders: "mantle", chest: "vestment", arms: "sleeves", back: "templecloak", main: "sword" }, look: { body: "m", hair: "grey", beard: true } });
   return { cls: k.name, tiers };
 });
 
-const state = { lo: { ...CLASSES.knight.loadout }, body: "m", hair: "hair", view: "front", mode: "idle" };
+const state = { lo: { ...CLASSES.knight.loadout }, body: "m", hair: "hair", beard: false, view: "front", mode: "idle", style: STYLE.name };
 const clean = (lo) => Object.fromEntries(KEYS.filter((k) => lo[k]).map((k) => [k, lo[k]]));
 const same = (a, b) => KEYS.every((k) => (a[k] || null) === (b[k] || null));
 
@@ -51,8 +52,8 @@ function toCanvas(img) {
 }
 const cache = new Map();
 function framesFor() {
-  const { lo, body, hair, view, mode } = state, bodyObj = { type: body, hair };
-  const key = JSON.stringify([clean(lo), body, hair, view, mode]);
+  const { lo, body, hair, beard, view, mode, style } = state, bodyObj = { type: body, hair, beard };
+  const key = JSON.stringify([clean(lo), body, hair, beard, view, mode, style]);
   if (cache.has(key)) return cache.get(key);
   let units, feetX, ms;
   if (mode === "attack") {
@@ -71,11 +72,11 @@ function framesFor() {
 // shoulder and hem widths, measured on each layer alone (guard stance, front view, male body)
 const spanCache = new Map();
 function spans(slot, id) {
-  const k = slot + "." + id;
+  const k = slot + "." + id + "." + STYLE.name, lift = STYLE.lift;
   if (!spanCache.has(k)) {
     const img = layerImg(slot, id, "front", 0, { type: "m", hair: "hair" }, "guard");
     const band = (y0, y1) => { let a = 99, z = -1; for (let y = y0; y <= y1; y++) for (let x = 0; x < img.w; x++) if (img.c[y * img.w + x]) { a = Math.min(a, x); z = Math.max(z, x); } return z < 0 ? 0 : z - a + 1; };
-    spanCache.set(k, img ? [band(17 + OY0, 27 + OY0), band(50 + OY0, 60 + OY0)] : [0, 0]);
+    spanCache.set(k, img ? [band(17 + OY0 - lift, 27 + OY0 - lift), band(50 + OY0, 60 + OY0)] : [0, 0]);
   }
   return spanCache.get(k);
 }
@@ -106,11 +107,13 @@ function render() {
   $("views").replaceChildren(...[["front", "SE (front)"], ["back", "NW (back)"]].map(([v, l]) => chip(l, state.view === v, () => { state.view = v; render(); })));
   $("bodies").replaceChildren(...[["m", "Male"], ["f", "Female"]].map(([b, l]) => chip(l, state.body === b, () => { state.body = b; render(); })));
   $("hairs").replaceChildren(...HAIRS.map(([h, l]) => chip(l, state.hair === h, () => { state.hair = h; render(); })));
+  $("beard").replaceChildren(chip("No beard", !state.beard, () => { state.beard = false; render(); }), chip("Beard", state.beard, () => { state.beard = true; render(); }));
+  $("styles").replaceChildren(...[["muted", "Muted"], ["classic", "Classic"]].map(([s, l]) => chip(l, state.style === s, () => { setStyle(s); state.style = s; cache.clear(); render(); })));
   let label = "Custom loadout";
   $("presets").replaceChildren(...PRESETS.map(({ cls, tiers }) => {
     const row = document.createElement("div"); row.className = "preset";
     const n = document.createElement("span"); n.className = "cls"; n.textContent = cls; row.append(n);
-    for (const t of tiers) { const on = same(t.lo, lo); if (on) label = t.label; row.append(chip(t.name, on, () => { state.lo = { ...t.lo }; render(); })); }
+    for (const t of tiers) { const on = same(t.lo, lo); if (on) label = t.label; row.append(chip(t.name, on, () => { state.lo = { ...t.lo }; if (t.look) Object.assign(state, t.look); render(); })); }
     return row;
   }));
   $("presetLabel").textContent = label;

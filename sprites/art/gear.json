@@ -350,7 +350,7 @@
   {
    "slot": "chest",
    "id": "chainK",
-   "name": "Hauberk & tabard",
+   "name": "Hauberk & cross surcoat",
    "col": 10,
    "row": 2,
    "sh": 17,
@@ -609,10 +609,19 @@
    "hem": 20
   },
   {
+   "slot": "back",
+   "id": "templecloak",
+   "name": "Trimmed long cloak",
+   "col": 3,
+   "row": 5,
+   "sh": 22,
+   "hem": 31
+  },
+  {
    "slot": "main",
    "id": "sword",
    "name": "Longsword",
-   "col": 3,
+   "col": 4,
    "row": 5,
    "sh": 8,
    "hem": 0
@@ -621,16 +630,16 @@
    "slot": "main",
    "id": "staff",
    "name": "Orb staff",
-   "col": 4,
+   "col": 5,
    "row": 5,
    "sh": 8,
-   "hem": 7
+   "hem": 5
   },
   {
    "slot": "main",
    "id": "sceptre",
    "name": "Sun sceptre",
-   "col": 5,
+   "col": 6,
    "row": 5,
    "sh": 12,
    "hem": 0
@@ -639,7 +648,7 @@
    "slot": "main",
    "id": "dagger",
    "name": "Dagger",
-   "col": 6,
+   "col": 7,
    "row": 5,
    "sh": 4,
    "hem": 0
@@ -648,7 +657,7 @@
    "slot": "main",
    "id": "spear",
    "name": "Dragoon spear",
-   "col": 7,
+   "col": 8,
    "row": 5,
    "sh": 8,
    "hem": 0
@@ -657,7 +666,7 @@
    "slot": "main",
    "id": "rod",
    "name": "Apprentice rod",
-   "col": 8,
+   "col": 9,
    "row": 5,
    "sh": 7,
    "hem": 0
@@ -666,7 +675,7 @@
    "slot": "main",
    "id": "mace",
    "name": "Flanged mace",
-   "col": 9,
+   "col": 10,
    "row": 5,
    "sh": 9,
    "hem": 0
@@ -675,7 +684,7 @@
    "slot": "main",
    "id": "dragonspear",
    "name": "Dragon lance",
-   "col": 10,
+   "col": 11,
    "row": 5,
    "sh": 9,
    "hem": 0
@@ -684,8 +693,8 @@
    "slot": "main",
    "id": "greatsword",
    "name": "Greatsword (two-handed)",
-   "col": 11,
-   "row": 5,
+   "col": 0,
+   "row": 6,
    "sh": 13,
    "hem": 0
   },
@@ -693,7 +702,7 @@
    "slot": "main",
    "id": "shortspear",
    "name": "Short spear (one-handed)",
-   "col": 0,
+   "col": 1,
    "row": 6,
    "sh": 8,
    "hem": 0
@@ -702,7 +711,7 @@
    "slot": "off",
    "id": "shield",
    "name": "Kite shield",
-   "col": 1,
+   "col": 2,
    "row": 6,
    "sh": 13,
    "hem": 0
@@ -711,7 +720,7 @@
    "slot": "off",
    "id": "bow",
    "name": "Longbow",
-   "col": 2,
+   "col": 3,
    "row": 6,
    "sh": 7,
    "hem": 5
@@ -720,7 +729,7 @@
    "slot": "off",
    "id": "dagger",
    "name": "Off-hand dagger",
-   "col": 3,
+   "col": 4,
    "row": 6,
    "sh": 4,
    "hem": 0
@@ -729,7 +738,7 @@
    "slot": "off",
    "id": "buckler",
    "name": "Buckler",
-   "col": 4,
+   "col": 5,
    "row": 6,
    "sh": 4,
    "hem": 0
@@ -738,7 +747,7 @@
    "slot": "off",
    "id": "shortbow",
    "name": "Short bow",
-   "col": 5,
+   "col": 6,
    "row": 6,
    "sh": 7,
    "hem": 0
@@ -747,16 +756,16 @@
    "slot": "off",
    "id": "greatbow",
    "name": "Recurve greatbow",
-   "col": 6,
+   "col": 7,
    "row": 6,
    "sh": 6,
-   "hem": 6
+   "hem": 5
   },
   {
    "slot": "off",
    "id": "tome",
    "name": "Prayer book",
-   "col": 7,
+   "col": 8,
    "row": 6,
    "sh": 0,
    "hem": 0
@@ -765,7 +774,7 @@
    "slot": "off",
    "id": "offsword",
    "name": "Off-hand sword",
-   "col": 8,
+   "col": 9,
    "row": 6,
    "sh": 4,
    "hem": 0
@@ -774,7 +783,7 @@
    "slot": "off",
    "id": "offmace",
    "name": "Off-hand mace",
-   "col": 9,
+   "col": 10,
    "row": 6,
    "sh": 9,
    "hem": 0
