@@ -1,5 +1,5 @@
 // Wardrobe viewer: draws a unit live with the sprite core and plays its idle or attack animation.
-import { CLASSES, KNIGHT_GS, LANCER_PH, TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0 } from "./lib/pixelrpg.js";
+import { CLASSES, KNIGHT_GS, LANCER_PH, TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0, FACINGS, drawUnit, turn, attackSide } from "./lib/pixelrpg.js";
 
 // short chip labels for every piece, by slot
 const SLOTS = [
@@ -27,7 +27,7 @@ const PRESETS = Object.entries(CLASSES).map(([key, k]) => {
   return { cls: k.name, tiers };
 });
 
-const state = { lo: { ...CLASSES.knight.loadout }, body: "m", hair: "hair", beard: false, view: "front", mode: "idle", style: STYLE.name };
+const state = { lo: { ...CLASSES.knight.loadout }, body: "m", hair: "hair", beard: false, facing: "SE", mode: "idle", style: STYLE.name };
 const clean = (lo) => Object.fromEntries(KEYS.filter((k) => lo[k]).map((k) => [k, lo[k]]));
 const same = (a, b) => KEYS.every((k) => (a[k] || null) === (b[k] || null));
 
@@ -52,16 +52,16 @@ function toCanvas(img) {
 }
 const cache = new Map();
 function framesFor() {
-  const { lo, body, hair, beard, view, mode, style } = state, bodyObj = { type: body, hair, beard };
-  const key = JSON.stringify([clean(lo), body, hair, beard, view, mode, style]);
+  const { lo, body, hair, beard, facing, mode, style } = state, bodyObj = { type: body, hair, beard };
+  const key = JSON.stringify([clean(lo), body, hair, beard, facing, mode, style]);
   if (cache.has(key)) return cache.get(key);
   let units, feetX, ms;
   if (mode === "attack") {
     setCell(96, 24);
-    units = [0, 1, 2, 3].map((p) => dress(lo, view, 0, bodyObj, null, stanceOf(lo), p));
+    units = [0, 1, 2, 3].map((p) => drawUnit(lo, facing, 0, bodyObj, stanceOf(lo), p));
     setCell(48, 0); feetX = 48; ms = ATTACK_MS;
   } else {
-    units = [0, 1].map((b) => dress(lo, view, b, bodyObj)); feetX = 24; ms = IDLE_MS;
+    units = [0, 1].map((b) => drawUnit(lo, facing, b, bodyObj)); feetX = 24; ms = IDLE_MS;
   }
   const frames = units.map((u, i) => ({ scene: toCanvas(sceneOf(u, feetX)), sil: toCanvas(silOf(u, feetX)), ms: ms[i] }));
   if (cache.size > 60) cache.clear();
@@ -104,7 +104,10 @@ function pick(slot, id) {
 function render() {
   const { lo } = state;
   $("modes").replaceChildren(...[["idle", "Idle"], ["attack", "Attack"]].map(([m, l]) => chip(l, state.mode === m, () => { state.mode = m; start = performance.now(); render(); })));
-  $("views").replaceChildren(...[["front", "SE (front)"], ["back", "NW (back)"]].map(([v, l]) => chip(l, state.view === v, () => { state.view = v; render(); })));
+  $("views").replaceChildren(
+    chip("Turn left", false, () => { state.facing = turn(state.facing, -1); render(); }),
+    ...FACINGS.map((f) => chip(f, state.facing === f, () => { state.facing = f; render(); })),
+    chip("Turn right", false, () => { state.facing = turn(state.facing, 1); render(); }));
   $("bodies").replaceChildren(...[["m", "Male"], ["f", "Female"]].map(([b, l]) => chip(l, state.body === b, () => { state.body = b; render(); })));
   $("hairs").replaceChildren(...HAIRS.map(([h, l]) => chip(l, state.hair === h, () => { state.hair = h; render(); })));
   $("beard").replaceChildren(chip("No beard", !state.beard, () => { state.beard = false; render(); }), chip("Beard", state.beard, () => { state.beard = true; render(); }));
@@ -129,8 +132,24 @@ function render() {
   $("shape").textContent = sh.s; $("shapeName").textContent = sh.name;
   $("widths").textContent = `SHOULDERS ${sh.sh} PX · HEM ${sh.hem} PX`;
   $("stance").textContent = `STANCE: ${STANCE_NAMES[st] ?? STANCES[st]?.name ?? st} · SET BY THE WEAPON`;
-  $("unitCap").textContent = `${state.view === "front" ? "SE" : "NW"} · ${state.mode === "attack" ? "ATTACK · 4 FRAMES" : "IDLE · 2 FRAMES"} · 4×`;
+  $("unitCap").textContent = `${state.facing} · ${state.mode === "attack" ? "ATTACK · 4 FRAMES" : "IDLE · 2 FRAMES"} · 4×`;
   frames = framesFor();
+  drawArcs();
+}
+
+// facing arcs: the unit on the centre of a 5 x 5 grid; every other tile is coloured by where an attacker there would stand
+function drawArcs() {
+  const W = 240, H = 152, OX = 96, OY = 64, img = new Img(W, H), cells = [];
+  for (let c = -2; c <= 2; c++) for (let r = -2; r <= 2; r++) cells.push([c, r]);
+  cells.sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[0] - b[0]);
+  const bodyObj = { type: state.body, hair: state.hair, beard: state.beard };
+  for (const [c, r] of cells) {
+    const sx = OX + (c - r) * 24, sy = OY + (c + r) * 12, centre = c === 0 && r === 0;
+    img.blit(tile("grass", 0, (c + 3) * 7 + r, centre ? null : attackSide([0, 0], state.facing, [c, r])), sx, sy);
+    if (centre) img.blit(drawUnit(state.lo, state.facing, 0, bodyObj), sx, sy + 12 - 72);
+  }
+  const a = $("arcs").getContext("2d"); a.imageSmoothingEnabled = false;
+  a.clearRect(0, 0, W * 2, H * 2); a.drawImage(toCanvas(img), 0, 0, W * 2, H * 2);
 }
 
 // ---------- playback ----------

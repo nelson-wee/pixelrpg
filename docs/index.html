@@ -65,6 +65,10 @@ footer { max-width: 1400px; margin: 0 auto; padding: 0 24px 40px; color: var(--d
       <div class="stage"><canvas id="unit" width="448" height="416" aria-label="The dressed unit, animated"></canvas><span class="cap" id="unitCap">SE · IDLE · 4×</span></div>
       <div class="stage sil"><canvas id="sil" width="224" height="208" aria-label="The unit's silhouette"></canvas><span class="cap">SILHOUETTE · 2×</span></div>
     </div>
+    <div class="stage" style="align-items: flex-start">
+      <canvas id="arcs" width="480" height="304" aria-label="Facing arcs: the tiles around the unit coloured front, side and back"></canvas>
+      <span class="cap">FACING ARCS · 2× · <span style="color: #a8d4f4">BLUE FRONT</span> · <span style="color: #e6c679">GOLD SIDE</span> · <span style="color: #f6a07a">RED BACK</span></span>
+    </div>
     <div class="toggles">
       <span class="label">ANIMATION</span><div class="row" id="modes"></div>
       <span class="label">FACING</span><div class="row" id="views"></div>

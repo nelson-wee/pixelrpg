@@ -65,6 +65,7 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 - **Gear:** one base body (male or female) plus 8 slots: head, shoulders, chest, arms, legs, back, main hand and off hand. Each layer has its own outline. There are 79 pieces and 3 tiers for each class.
 - **Silhouette:** heavy armour makes a V shape, robes make an A shape, and light gear makes an I shape.
 - **Stances:** the equipped weapon selects the stance: guard, caster, archer, dual wield, lancer, greatsword, or spear and shield. Units face SE (front) or NW (back), with the feet on the tile diagonal.
+- **Facings:** a unit faces one of 4 grid directions: NE, SE, SW or NW, which are the screen diagonals. SE (front) and NW (back) are drawn. SW mirrors SE and NE mirrors NW, so handedness flips in the mirrored facings. One grid step per facing (`[dcol, drow]`): SE `[1, 0]`, SW `[0, 1]`, NW `[-1, 0]`, NE `[0, -1]`. The core gives `drawUnit(loadout, facing, bob, body, stance, pose)`, `turn(facing, ±1)`, `facingToward(fromTile, toTile)` and `attackSide(defenderTile, defenderFacing, attackerTile)`, which returns `"front"`, `"side"` or `"back"` for facing rules in combat. Diagonal tiles count as front or back.
 - **Two-handed weapons:** the greatsword, the spear and the dragon lance use both hands, so the off-hand layer is not drawn. The short spear is one-handed and goes with a shield. It uses the guard ready pose and has its own thrust attack.
 - **Attacks:** 4 frames (ready 560 ms, wind-up 320 ms, strike 200 ms, follow-through 350 ms) in a 96 × 76 px cell, with the feet at (48, 72).
 - **Effects on attacks:** an effect starts so that its own `act` hit time lands on our strike frame. On the hit, the whole picture freezes for the effect's hit-stop. Melee effects tilt 0.2–0.25 rad down to face SE. Projectiles start at the releasing hand on the strike frame and fly to the target's body centre (16 px above its feet), at 24 px per frame for arrows and 16 px per frame for spells.
@@ -74,9 +75,10 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 
 | File | Layout |
 |---|---|
-| `unit-<class>.png` | 4 frames of 48 × 76: front idle ×2, back idle ×2 |
+| `unit-<class>.png` | 8 frames of 48 × 76: SE idle ×2, NW idle ×2, SW idle ×2, NE idle ×2 |
+| `facings.png` | 6 rows (classes) × 4 columns (NE, SE, SW, NW), each unit on an iso tile, 48 × 100 per cell |
 | `tiers.png` | 6 rows (classes) × 6 columns (T1–T3 male, T1–T3 female) |
-| `attacks.png` | 8 rows × 8 frames of 96 × 76: 4 SE poses, then 4 NW poses. Rows: the 6 classes, then the knight with a greatsword, then the lancer with spear and shield |
+| `attacks.png` | 8 rows × 16 frames of 96 × 76: 4 poses each for SE, NW, SW, then NE. Rows: the 6 classes, then the knight with a greatsword, then the lancer with spear and shield |
 | `atlas-<m\|f>-<stance>.png` | Every gear layer alone, 12 columns of 48 × 76. Cell positions are in `gear.json`. The phalanx (spear and shield) atlas is the same as the guard atlas |
 | `combat-<clip>.png` | Attack clips with pixelfx effects, one row at 15 fps: knight sword, knight greatsword, thief X cut, lancer thrust, lancer spear and shield, mage fireball, archer arrow. Frame size, hit frame and hit-stop are in `combat.json` |
 | `battle-map.png` | The 11 × 11 sample map, 552 × 412 |

@@ -9,7 +9,7 @@ const { encodePNG } = await import(pathToFileURL(`${LIB}/tools/lib/png.mjs`).hre
 mkdirSync(OUT, { recursive: true });
 
 import * as core from "../docs/lib/pixelrpg.js";
-const { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, R, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile, setCell, setPNGWriter, setStyle, STYLE } = core;
+const { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, R, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile, setCell, setPNGWriter, setStyle, STYLE, FACINGS, drawUnit } = core;
 setStyle(process.env.STYLE === "classic" ? "classic" : "muted"); // STYLE=classic npm run art for the original look
 setPNGWriter((file, w, h, rgba) => writeFileSync(`${OUT}/${file}`, encodePNG(w, h, rgba)));
 
@@ -17,8 +17,9 @@ setPNGWriter((file, w, h, rgba) => writeFileSync(`${OUT}/${file}`, encodePNG(w, 
 // unit sheets (default body, top tier): [front idle 0, front idle 1, back idle 0, back idle 1]
 const roster = {};
 for (const key of Object.keys(CLASSES)) {
-  const frames = [makeSprite(key, "front", 0), makeSprite(key, "front", 1), makeSprite(key, "back", 0), makeSprite(key, "back", 1)];
-  const sheet = new Img(CW * 4, CH);
+  // frames: SE idle 0-1, NW idle 0-1 (as before), then SW idle 0-1 and NE idle 0-1 (mirrors)
+  const k = CLASSES[key], frames = ["SE", "NW", "SW", "NE"].flatMap((f) => [0, 1].map((b) => drawUnit(k.loadout, f, b, k.body)));
+  const sheet = new Img(CW * 8, CH);
   frames.forEach((f, i) => sheet.blit(f, i * CW, 0));
   sheet.png(`unit-${key}.png`);
   roster[key] = frames;
@@ -118,7 +119,7 @@ function battle(file, { marks = true } = {}) {
     return "grass";
   };
   const H2 = (i, j) => (ter(i, j) === "wood" ? 1 : hgt(i, j));
-  const units = { "3,7": ["knight", "front"], "6,8": ["mage", "front"], "0,5": ["archer", "front"], "8,3": ["thief", "back"], "2,9": ["cleric", "front"], "1,1": ["lancer", "back"] };
+  const units = { "3,7": ["knight", "SE"], "6,8": ["mage", "SE"], "0,5": ["archer", "SE"], "8,3": ["thief", "NE"], "2,9": ["cleric", "SE"], "1,1": ["lancer", "NE"] };
   const props = { "1,10": "oak", "9,6": "oak", "10,1": "pine", "1,4": "banner", "8,9": "pine", "10,9": "pine", "6,10": "rock", "4,10": "bush", "3,3": "crystal", "9,0": "crate", "0,0": "chest", "6,2": "bush" };
   const moveSet = new Set(["3,8", "4,7", "3,9", "2,8", "4,9", "5,8", "4,10", "2,7", "5,7"]);
   const atkSet = new Set(["3,6", "4,6"]);
@@ -131,7 +132,7 @@ function battle(file, { marks = true } = {}) {
     img.blit(tile(ter(i, j), h + 1, i * 13 + j * 7, m), sx, sy - STEP);
     if (marks && key === "3,7") cursor(img, sx, sy - STEP);
     if (props[key]) img.blit(prop(props[key]), sx + HW - 20, sy - STEP + HH - 48);
-    if (units[key]) { const [u, v] = units[key]; img.blit(makeSprite(u, v, 0), sx + HW - FX, sy - STEP + HH - FY + 1, v === "back"); }
+    if (units[key]) { const [u, f] = units[key], k = CLASSES[u]; img.blit(drawUnit(k.loadout, f, 0, k.body), sx + HW - FX, sy - STEP + HH - FY + 1); }
   }
   // enemy slime marker spot left empty for the live pixelfx critter
   img.png(file);
@@ -179,8 +180,9 @@ console.log("ok", mapInfo);
   setCell(96, 24); const LW = 96;
   // rows: the six classes, then the knight with a greatsword and the lancer with spear and shield
   const rows = Object.values(CLASSES).map((k) => [k.loadout, k.body]).concat([[KNIGHT_GS, CLASSES.knight.body], [LANCER_PH, CLASSES.lancer.body]]);
-  const s2 = new Img(8 * LW, rows.length * CH);
-  rows.forEach(([lo, bd], r) => ["front", "back"].forEach((v, vi) => [0, 1, 2, 3].forEach((p) => s2.blit(dress(lo, v, 0, bd, null, stanceOf(lo), p), (vi * 4 + p) * LW, r * CH))));
+  // per row: SE poses 0-3, NW poses 0-3, SW poses 0-3, NE poses 0-3
+  const s2 = new Img(16 * LW, rows.length * CH);
+  rows.forEach(([lo, bd], r) => ["SE", "NW", "SW", "NE"].forEach((f, fi) => [0, 1, 2, 3].forEach((p) => s2.blit(drawUnit(lo, f, 0, bd, stanceOf(lo), p), (fi * 4 + p) * LW, r * CH))));
   s2.png("attacks.png");
 }
 // dual wield across classes: same stance with three weapon pairs
@@ -269,3 +271,13 @@ console.log("ok", mapInfo);
   console.log("combat clips", meta);
 }
 
+// facings sheet: every class (default body, top tier) in the four facings, clockwise from NE, each on an iso tile
+{
+  const keys = Object.keys(CLASSES), SH = 100, s = new Img(FACINGS.length * CW, keys.length * SH);
+  keys.forEach((key, r) => FACINGS.forEach((f, i) => {
+    const k = CLASSES[key];
+    s.blit(tile("grass", 1, r * 4 + i), i * CW + 24 - HW, r * SH + FY - HH);
+    s.blit(drawUnit(k.loadout, f, 0, k.body), i * CW, r * SH);
+  }));
+  s.png("facings.png");
+}

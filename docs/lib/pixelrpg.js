@@ -1124,6 +1124,34 @@ function dress(loadout, view, bob = 0, body = {}, only = null, stance = stanceOf
   return out;
 }
 function makeSprite(key, view, bob = 0) { const k = CLASSES[key]; return dress(k.loadout, view, bob, k.body); }
+
+// ---------- four facings ----------
+// A unit stands on a tile and faces one of the four grid directions. On screen these are the iso diagonals.
+// SE and NW are drawn; SW mirrors SE and NE mirrors NW (the usual iso tactics approach; handedness flips with the mirror).
+const FACINGS = ["NE", "SE", "SW", "NW"]; // clockwise on screen
+const FACING_DIR = { SE: [1, 0], SW: [0, 1], NW: [-1, 0], NE: [0, -1] }; // one grid step as [dcol, drow]
+const FACING_VIEW = { SE: ["front", false], SW: ["front", true], NW: ["back", false], NE: ["back", true] };
+function drawUnit(lo, facing = "SE", bob = 0, body = {}, stance = stanceOf(lo), pose = 0) {
+  const [view, flip] = FACING_VIEW[facing] ?? FACING_VIEW.SE;
+  const img = dress(lo, view, bob, body, null, stance, pose);
+  return flip ? mirrorImg(img) : img;
+}
+// turn by quarter turns: +1 clockwise, -1 counter-clockwise
+const turn = (facing, steps = 1) => FACINGS[(((FACINGS.indexOf(facing) + steps) % 4) + 4) % 4];
+// facing from one tile toward another (the larger axis wins; ties go to the column axis)
+function facingToward(from, to) {
+  const dc = to[0] - from[0], dr = to[1] - from[1];
+  return Math.abs(dc) >= Math.abs(dr) ? (dc >= 0 ? "SE" : "NW") : (dr >= 0 ? "SW" : "NE");
+}
+// where an attacker stands relative to a defender's facing: "front", "side" or "back".
+// Diagonal tiles count as front or back, so each arc covers a 90-degree wedge plus its edges.
+function attackSide(defTile, defFacing, atkTile) {
+  const [fc, fr] = FACING_DIR[defFacing], dc = atkTile[0] - defTile[0], dr = atkTile[1] - defTile[1];
+  const fwd = dc * fc + dr * fr, across = Math.abs(dc * fr - dr * fc);
+  if (fwd > 0 && fwd >= across) return "front";
+  if (fwd < 0 && -fwd >= across) return "back";
+  return "side";
+}
 const solid = (img, hex) => { const o = new Img(img.w, img.h); img.c.forEach((v, i) => { if (v && v.a === undefined) o.c[i] = { hex }; }); return o; };
 
 // ---------- isometric tiles: 48x24 top, 12 px per height step ----------
@@ -1176,7 +1204,8 @@ function tile(type, h, seed = 0, mark = null) {
   if (mark) markTop(img, mark);
   return img;
 }
-const MARK = { move: ["#5e9ae0", "#a8d4f4"], attack: ["#e0604e", "#f6a07a"], ally: ["#5c9a48", "#a4cc6a"] };
+const MARK = { move: ["#5e9ae0", "#a8d4f4"], attack: ["#e0604e", "#f6a07a"], ally: ["#5c9a48", "#a4cc6a"],
+  front: ["#5e9ae0", "#a8d4f4"], side: ["#c69746", "#e6c679"], back: ["#e0604e", "#f6a07a"] };
 function markTop(img, kind) {
   const [fill, edge] = MARK[kind];
   for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
@@ -1449,4 +1478,4 @@ function frame(style) {
 }
 
 setStyle("muted");
-export { setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
+export { FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
