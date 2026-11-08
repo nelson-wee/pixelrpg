@@ -1,0 +1,86 @@
+{
+ "frameW": 112,
+ "frameH": 104,
+ "feet": [
+  56,
+  84
+ ],
+ "fps": 15,
+ "frames": 45,
+ "idleFrames": 24,
+ "attackFrames": 21,
+ "rows": {
+  "flame-sword": {
+   "name": "Flame sword",
+   "row": 0,
+   "effects": [
+    {
+     "slot": "main",
+     "item": "flamesword",
+     "fx": "status/burning",
+     "target": "self",
+     "element": "fire"
+    }
+   ]
+  },
+  "frost-staff": {
+   "name": "Frost staff",
+   "row": 1,
+   "effects": [
+    {
+     "slot": "main",
+     "item": "froststaff",
+     "fx": "status/frozen",
+     "target": "self",
+     "element": "ice"
+    }
+   ]
+  },
+  "storm-spear": {
+   "name": "Storm spear",
+   "row": 2,
+   "effects": [
+    {
+     "slot": "main",
+     "item": "stormspear",
+     "fx": "lightning/electrified",
+     "target": "self",
+     "element": "storm"
+    }
+   ]
+  },
+  "shadow-daggers": {
+   "name": "Shadow daggers",
+   "row": 3,
+   "effects": [
+    {
+     "slot": "main",
+     "item": "shadowdagger",
+     "fx": "status/burning",
+     "target": "self",
+     "element": "shadow"
+    },
+    {
+     "slot": "off",
+     "item": "shadowdagger",
+     "fx": "status/burning",
+     "target": "self",
+     "element": "shadow"
+    }
+   ]
+  },
+  "holy-vestments": {
+   "name": "Holy vestments",
+   "row": 4,
+   "effects": [
+    {
+     "slot": "chest",
+     "item": "holyvestments",
+     "fx": "holy/blessing",
+     "target": "body",
+     "element": "holy"
+    }
+   ]
+  }
+ }
+}

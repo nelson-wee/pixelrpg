@@ -4,9 +4,12 @@
   "private": true,
   "description": "Pixel art design system for an isometric fantasy tactics RPG: layered gear sprites, stances, attacks, tiles and pixelfx effects.",
   "type": "module",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "art": "node tools/art.mjs",
-    "fx": "node tools/fx.mjs"
+    "fx": "node tools/fx.mjs",
+    "site": "node tools/site.mjs"
   }
 }
