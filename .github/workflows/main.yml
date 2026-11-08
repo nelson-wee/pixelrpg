@@ -1,9 +1,10 @@
 name: Deploy Wardrobe to GitHub Pages
 
+# Publishes the static site in docs/ (the Wardrobe viewer) when main changes.
 on:
   push:
-    branches: [dev, main]
-    paths: ["docs/**", ".github/workflows/pages.yml"]
+    branches: [main]
+    paths: ["docs/**", ".github/workflows/main.yml"]
   workflow_dispatch:
 
 permissions:
@@ -11,6 +12,7 @@ permissions:
   pages: write
   id-token: write
 
+# one deploy at a time; a newer push cancels a deploy that is still running
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -22,10 +24,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: docs
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
