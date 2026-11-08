@@ -1,16 +1,17 @@
 // Wardrobe viewer: draws a unit live with the sprite core and plays its idle or attack animation.
-import { CLASSES, KNIGHT_GS, LANCER_PH, TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0, FACINGS, drawUnit, turn, attackSide } from "./lib/pixelrpg.js";
+import { CLASSES, KNIGHT_GS, LANCER_PH, ENCHANTED, TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0, FACINGS, FACING_VIEW, drawUnit, turn, attackSide } from "./lib/pixelrpg.js";
+import { GearFx, fxPieces, over, place } from "./lib/gearfx.js";
 
 // short chip labels for every piece, by slot
 const SLOTS = [
   ["head", "HEAD", [["greathelm", "Great helm"], ["coif", "Mail coif"], ["leathercap", "Leather cap"], ["winghelm", "Spire helm"], ["kettle", "Kettle hat"], ["wizhat", "Brim hat"], ["magehood", "Pointed hood"], ["cap", "Apprentice cap"], ["mitre", "Mitre"], ["veil", "Veil"], ["hood", "Hood"], ["huntercap", "Feather cap"], ["falconhelm", "Winged helm"], ["cowl", "Cowl"], ["bandana", "Bandana"], ["shadowmask", "Demon mask"]]],
   ["shoulders", "SHOULDERS", [["pauldrons", "Pauldrons"], ["halfpauldrons", "Half pauldrons"], ["leatherpads", "Leather pads"], ["darkpads", "Lacquered pads"], ["spaulders", "Spaulders"], ["mantle", "Mantle"], ["collar", "Collar"]]],
-  ["chest", "CHEST", [["plate", "Plate"], ["chainK", "Hauberk + cross"], ["chain", "Hauberk teal"], ["leatherarmor", "Studded leather"], ["scaleplate", "Dragon scale"], ["gambeson", "Gambeson"], ["robe", "Archmage robe"], ["simplerobe", "Adept robe"], ["shortrobe", "Short robe"], ["gown", "Gown"], ["vestment", "Vestment"], ["habit", "Habit"], ["brigandine", "Brigandine"], ["jerkin", "Jerkin"], ["tunic", "Tunic"], ["garb", "Garb"], ["lamellar", "Lamellar"], ["darktunic", "Patched tunic"]]],
+  ["chest", "CHEST", [["holyvestments", "Holy vestments (fx)"], ["plate", "Plate"], ["chainK", "Hauberk + cross"], ["chain", "Hauberk teal"], ["leatherarmor", "Studded leather"], ["scaleplate", "Dragon scale"], ["gambeson", "Gambeson"], ["robe", "Archmage robe"], ["simplerobe", "Adept robe"], ["shortrobe", "Short robe"], ["gown", "Gown"], ["vestment", "Vestment"], ["habit", "Habit"], ["brigandine", "Brigandine"], ["jerkin", "Jerkin"], ["tunic", "Tunic"], ["garb", "Garb"], ["lamellar", "Lamellar"], ["darktunic", "Patched tunic"]]],
   ["arms", "ARMS", [["gauntlets", "Gauntlets"], ["mail", "Mail"], ["bracers", "Bracers"], ["bell", "Bell sleeves"], ["magesleeves", "Straight sleeves"], ["sleeves", "Long sleeves"], ["woolsleeves", "Wool sleeves"]]],
   ["legs", "LEGS", [["greaves", "Greaves"], ["chausses", "Chausses"], ["leggings", "Leggings"], ["trousers", "Trousers"], ["wraps", "Wraps"]]],
   ["back", "BACK", [["templecloak", "Trimmed cloak"], ["cape", "Cape"], ["dragoncape", "Dragon cape"], ["cloak", "Cloak"], ["wardencloak", "Warden cloak"], ["quiver", "Quiver"], ["scarf", "Scarf"], ["longscarf", "Long scarf"]]],
-  ["main", "MAIN HAND", [["sword", "Sword"], ["greatsword", "Greatsword (2H)"], ["mace", "Mace"], ["dagger", "Dagger"], ["shortspear", "Short spear"], ["spear", "Spear (2H)"], ["dragonspear", "Dragon lance (2H)"], ["staff", "Staff"], ["rod", "Rod"], ["sceptre", "Sceptre"]]],
-  ["off", "OFF HAND", [["shield", "Kite shield"], ["buckler", "Buckler"], ["dagger", "Dagger"], ["offsword", "Sword"], ["offmace", "Mace"], ["bow", "Longbow"], ["shortbow", "Short bow"], ["greatbow", "Greatbow"], ["tome", "Book"]]],
+  ["main", "MAIN HAND", [["flamesword", "Flame sword (fx)"], ["froststaff", "Frost staff (fx)"], ["stormspear", "Storm spear (2H, fx)"], ["shadowdagger", "Shadow dagger (fx)"], ["sword", "Sword"], ["greatsword", "Greatsword (2H)"], ["mace", "Mace"], ["dagger", "Dagger"], ["shortspear", "Short spear"], ["spear", "Spear (2H)"], ["dragonspear", "Dragon lance (2H)"], ["staff", "Staff"], ["rod", "Rod"], ["sceptre", "Sceptre"]]],
+  ["off", "OFF HAND", [["shadowdagger", "Shadow dagger (fx)"], ["shield", "Kite shield"], ["buckler", "Buckler"], ["dagger", "Dagger"], ["offsword", "Sword"], ["offmace", "Mace"], ["bow", "Longbow"], ["shortbow", "Short bow"], ["greatbow", "Greatbow"], ["tome", "Book"]]],
 ];
 const KEYS = SLOTS.map(([k]) => k);
 const HAIRS = [["hair", "Brown"], ["crimson", "Red"], ["hairB", "Blue-black"], ["ink", "Black"], ["grey", "Grey"]];
@@ -26,8 +27,10 @@ const PRESETS = Object.entries(CLASSES).map(([key, k]) => {
   if (key === "cleric") tiers.push({ name: "Elder", label: "Cleric · Elder (trimmed cloak, beard)", lo: { shoulders: "mantle", chest: "vestment", arms: "sleeves", back: "templecloak", main: "sword" }, look: { body: "m", hair: "grey", beard: true } });
   return { cls: k.name, tiers };
 });
+// enchanted pilot items: each loadout wears one piece that carries a live pixelfx effect
+PRESETS.push({ cls: "Enchanted", tiers: ENCHANTED.map(([key, name, lo, body]) => ({ name, label: `Enchanted · ${name}`, lo, look: { body: body.type, hair: body.hair, beard: false } })) });
 
-const state = { lo: { ...CLASSES.knight.loadout }, body: "m", hair: "hair", beard: false, facing: "SE", mode: "idle", style: STYLE.name };
+const state = { lo: { ...CLASSES.knight.loadout }, body: "m", hair: "hair", beard: false, facing: "SE", mode: "idle", style: STYLE.name, fx: true };
 const clean = (lo) => Object.fromEntries(KEYS.filter((k) => lo[k]).map((k) => [k, lo[k]]));
 const same = (a, b) => KEYS.every((k) => (a[k] || null) === (b[k] || null));
 
@@ -55,15 +58,18 @@ function framesFor() {
   const { lo, body, hair, beard, facing, mode, style } = state, bodyObj = { type: body, hair, beard };
   const key = JSON.stringify([clean(lo), body, hair, beard, facing, mode, style]);
   if (cache.has(key)) return cache.get(key);
-  let units, feetX, ms;
-  if (mode === "attack") {
-    setCell(96, 24);
-    units = [0, 1, 2, 3].map((p) => drawUnit(lo, facing, 0, bodyObj, stanceOf(lo), p));
-    setCell(48, 0); feetX = 48; ms = ATTACK_MS;
-  } else {
-    units = [0, 1].map((b) => drawUnit(lo, facing, b, bodyObj)); feetX = 24; ms = IDLE_MS;
-  }
-  const frames = units.map((u, i) => ({ scene: toCanvas(sceneOf(u, feetX)), sil: toCanvas(silOf(u, feetX)), ms: ms[i] }));
+  const [view, flip] = FACING_VIEW[facing], st = stanceOf(lo), pieces = fxPieces(lo, TWO_HANDED), attack = mode === "attack";
+  const poses = attack ? [0, 1, 2, 3] : [0, 1], feetX = attack ? 48 : 24, ms = attack ? ATTACK_MS : IDLE_MS;
+  if (attack) setCell(96, 24);
+  const frames = poses.map((p, i) => {
+    const pose = attack ? p : 0, bob = attack ? 0 : p, u = dress(lo, view, bob, bodyObj, null, st, pose);
+    // the images each effect wraps in this pose: the piece itself, or the whole unit
+    const srcs = Object.fromEntries(pieces.map((q) => [`${q.slot}.${q.id}`, q.spec.target === "body" ? u : layerImg(q.slot, q.id, view, bob, bodyObj, st, pose)]));
+    const unitRGBA = place(new Uint8ClampedArray(SW * SH * 4), SW, SH, u.rgba(), u.w, u.h, FEET[0] - feetX, FEET[1] - 72);
+    return { scene: toCanvas(sceneOf(u, feetX)), sil: toCanvas(silOf(u, feetX)), ms: ms[i], unitRGBA, srcs, feetX };
+  });
+  if (attack) setCell(48, 0);
+  frames.flip = flip; frames.pieces = pieces;
   if (cache.size > 60) cache.clear();
   cache.set(key, frames);
   return frames;
@@ -111,6 +117,7 @@ function render() {
   $("bodies").replaceChildren(...[["m", "Male"], ["f", "Female"]].map(([b, l]) => chip(l, state.body === b, () => { state.body = b; render(); })));
   $("hairs").replaceChildren(...HAIRS.map(([h, l]) => chip(l, state.hair === h, () => { state.hair = h; render(); })));
   $("beard").replaceChildren(chip("No beard", !state.beard, () => { state.beard = false; render(); }), chip("Beard", state.beard, () => { state.beard = true; render(); }));
+  $("effects").replaceChildren(chip("Effects on", state.fx, () => { state.fx = true; render(); }), chip("Effects off", !state.fx, () => { state.fx = false; render(); }));
   $("styles").replaceChildren(...[["muted", "Muted"], ["classic", "Classic"]].map(([s, l]) => chip(l, state.style === s, () => { setStyle(s); state.style = s; cache.clear(); render(); })));
   let label = "Custom loadout";
   $("presets").replaceChildren(...PRESETS.map(({ cls, tiers }) => {
@@ -134,7 +141,33 @@ function render() {
   $("stance").textContent = `STANCE: ${STANCE_NAMES[st] ?? STANCES[st]?.name ?? st} · SET BY THE WEAPON`;
   $("unitCap").textContent = `${state.facing} · ${state.mode === "attack" ? "ATTACK · 4 FRAMES" : "IDLE · 2 FRAMES"} · 4×`;
   frames = framesFor();
+  setupFx();
   drawArcs();
+}
+
+// ---------- live gear effects (pixelfx, loaded from ./pixelfx/ when present) ----------
+let PFX = null, pfxFailed = false, gfx = null;
+const fxMods = {};
+async function setupFx() {
+  const pieces = frames.pieces ?? [], ids = [...new Set(pieces.map((p) => p.spec.id))];
+  const note = (t) => { $("fxNote").textContent = t; };
+  if (!state.fx || !pieces.length) { gfx = null; note(pieces.length ? "EFFECTS OFF" : "NO ENCHANTED GEAR EQUIPPED"); return; }
+  try {
+    PFX ??= await import("./pixelfx/core/index.js");
+    for (const id of ids) fxMods[id] ??= await import(`./pixelfx/fx/${id}.js`);
+  } catch (e) { pfxFailed = true; gfx = null; note("EFFECTS NEED THE PIXELFX FILES IN docs/pixelfx (npm run site)"); return; }
+  gfx ??= new GearFx(PFX, fxMods, SW, SH, FEET);
+  gfx.sync(pieces);
+  note("LIVE EFFECTS: " + pieces.map((p) => `${p.spec.element.toUpperCase()} (${p.spec.id})`).join(" · "));
+}
+const ground1 = (() => { const g = new Img(SW, SH); g.blit(ground, FEET[0] - 24, FEET[1] - 12); return g; })();
+const fxCanvas = document.createElement("canvas"); fxCanvas.width = SW; fxCanvas.height = SH;
+function fxScene(f, dt) {
+  gfx.step(dt);
+  const { back, front } = gfx.layers((it) => ({ img: f.srcs[`${it.slot}.${it.id}`], fx: f.feetX, fy: 72 }));
+  const img = ground1.rgba(); over(img, back); over(img, f.unitRGBA); over(img, front);
+  fxCanvas.getContext("2d").putImageData(new ImageData(img, SW, SH), 0, 0);
+  return fxCanvas;
 }
 
 // facing arcs: the unit on the centre of a 5 x 5 grid; every other tile is coloured by where an attacker there would stand
@@ -155,17 +188,23 @@ function drawArcs() {
 // ---------- playback ----------
 const ctx = $("unit").getContext("2d"), sctx = $("sil").getContext("2d");
 ctx.imageSmoothingEnabled = false; sctx.imageSmoothingEnabled = false;
-let frames = [], start = performance.now(), shown = -1;
+let frames = [], start = performance.now(), shown = -1, lastFx = 0;
+function blitTo(c, src, w, h, flip) {
+  c.clearRect(0, 0, w, h);
+  if (flip) { c.save(); c.translate(w, 0); c.scale(-1, 1); c.drawImage(src, 0, 0, w, h); c.restore(); }
+  else c.drawImage(src, 0, 0, w, h);
+}
 function tick(now) {
   if (frames.length) {
     const total = frames.reduce((a, f) => a + f.ms, 0);
     let t = (now - start) % total, i = 0;
     while (t >= frames[i].ms) { t -= frames[i].ms; i++; }
-    if (i !== shown || frames !== tick.last) {
-      ctx.clearRect(0, 0, SW * ZOOM, SH * ZOOM); ctx.drawImage(frames[i].scene, 0, 0, SW * ZOOM, SH * ZOOM);
-      sctx.clearRect(0, 0, SW * 2, SH * 2); sctx.drawImage(frames[i].sil, 0, 0, SW * 2, SH * 2);
-      shown = i; tick.last = frames;
-    }
+    const live = gfx && state.fx && gfx.items.size;
+    if (live && now - lastFx >= 1000 / 15) {
+      const dt = Math.min(0.2, (now - (lastFx || now)) / 1000) || 1 / 15; lastFx = now;
+      blitTo(ctx, fxScene(frames[i], dt), SW * ZOOM, SH * ZOOM, frames.flip);
+    } else if (!live && (i !== shown || frames !== tick.last)) blitTo(ctx, frames[i].scene, SW * ZOOM, SH * ZOOM, frames.flip);
+    if (i !== shown || frames !== tick.last) { blitTo(sctx, frames[i].sil, SW * 2, SH * 2, frames.flip); shown = i; tick.last = frames; }
   }
   requestAnimationFrame(tick);
 }

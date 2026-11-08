@@ -230,7 +230,7 @@ const STANCES = {
 };
 // one-handed spear with a shield: the same ready pose as the sword-and-shield guard
 STANCES.phalanx = { ...STANCES.guard, name: "Spear & shield" };
-const TWO_HANDED = ["greatsword", "spear", "dragonspear"];
+const TWO_HANDED = ["greatsword", "spear", "dragonspear", "stormspear"];
 const ATK = {
   guard: [{ main: { e: [16.4, 24.8], h: [20.4, 20.2] }, mainDir: [-0.2, -0.98], lean: 0.04 },
           { main: { e: [26.6, 28.6], h: [31, 31] }, mainDir: [0.88, 0.475], lean: 0.16, dc: 1, step: 3 },
@@ -261,14 +261,14 @@ ATK.phalanx = [
   { main: { e: [23.4, 25], h: [28, 23] }, mainDir: [0.95, -0.31], lean: 0.14, step: 4 },
 ];
 const POSES = ["Ready", "Wind-up", "Strike", "Follow-through"];
-const BOWS = ["bow", "shortbow", "greatbow"], SPEARS = ["spear", "dragonspear"], RODS = ["staff", "rod", "sceptre"];
+const BOWS = ["bow", "shortbow", "greatbow"], SPEARS = ["spear", "dragonspear", "stormspear"], RODS = ["staff", "rod", "sceptre", "froststaff"];
 function stanceOf(lo = {}) {
   if (lo.main === "greatsword") return "greatsword";
   if (lo.main === "shortspear") return "phalanx";
   if (BOWS.includes(lo.off)) return "archer";
   if (SPEARS.includes(lo.main)) return "lancer";
   if (RODS.includes(lo.main) || lo.off === "tome") return "caster";
-  if (["dagger", "offsword", "offmace"].includes(lo.off) || lo.main === "dagger") return "rogue";
+  if (["dagger", "offsword", "offmace", "shadowdagger"].includes(lo.off) || lo.main === "dagger" || lo.main === "shadowdagger") return "rogue";
   return "guard";
 }
 function rig(view, bob, body = {}, stance = "guard", pose = 0) {
@@ -1059,6 +1059,52 @@ Object.assign(GEAR.back, {
     }
   } },
 });
+// ---------- enchanted pilot items: gear that carries a live pixelfx effect while it is equipped ----------
+// fx.id is a pixelfx effect that wraps a character mask. fx.target "self": the mask is this piece's own pixels
+// (a burning blade); "body": the mask is the whole unit (an aura from worn gear). See docs/lib/gearfx.js.
+// shadow flames: pixelfx burning with a violet-black ramp, so dark fire licks along the blades
+const SHADOW_FX = { id: "status/burning", target: "self", element: "shadow", opts: { palette: ["#05030a", "#120a1e", "#24123a", "#3a1c5c", "#5a2c86", "#8048b8", "#a970e0", "#d2b0f4", "#f4e8ff"], char: ["#0a0610", "#1a1024", "#2a1a3a"] } };
+const darkBlade = (img, h, v) => { const g = add2(h, v, 1); pole(img, add2(h, v, 1.8), add2(h, v, 8.6), P("arcane", 4), P("ink", 2)); img.set(g[0], g[1], P("arcane", 2)); };
+Object.assign(GEAR.main, {
+  flamesword: { name: "Flame sword", fx: { id: "status/burning", target: "self", element: "fire" }, draw(img, K) {
+    const h = K.main.h, v = K.mainDir, p = [-v[1], v[0]], g = add2(h, v, 2.4);
+    pole(img, add2(h, v, 2.8), add2(h, v, 30), P("gold", 4), P("crimson", 3));
+    for (let k = 7; k < 28; k += 5) { const q = add2(h, v, k); img.set(q[0] + 1, q[1], P("crimson", 1)); }
+    for (let i = -4; i <= 4; i++) { const q = add2(g, p, i); img.set(q[0], q[1], i === 0 ? P("crimson", 4) : P("ink", i < 0 ? 3 : 2)); }
+    const pm = add2(h, v, -3); img.set(pm[0], pm[1], P("crimson", 3)); img.set(pm[0] + 1, pm[1], P("crimson", 2));
+  } },
+  froststaff: { name: "Frost staff", fx: { id: "status/frozen", target: "self", element: "ice" }, draw(img, K) {
+    const [h, v, p] = MD(K), base = add2(h, v, 28), tip = add2(h, v, 38);
+    pole(img, add2(h, v, -25), base, P("steel", 3), P("steel", 2), (x, y) => nearHand(K, x, y));
+    headDiamond(img, base, tip, p, 2.8, "water");
+    for (const k of [-3, 3]) { const q = add2(add2(base, p, k), v, -1); img.set(q[0], q[1], P("snow", 3)); }
+    const c = add2(base, v, 4); img.set(c[0], c[1], P("snow", 4));
+  } },
+  stormspear: { name: "Storm spear (2H)", fx: { id: "lightning/electrified", target: "self", element: "storm" }, draw(img, K) {
+    const [h, v, p] = MD(K), base = add2(h, v, 30), tip = add2(h, v, 38);
+    pole(img, add2(h, v, -14), base, P("royal", 3), P("royal", 2), (x, y) => nearHand(K, x, y));
+    for (let k = -11; k < 28; k += 6) { const q = add2(h, v, k); if (!nearHand(K, q[0], q[1])) img.set(q[0], q[1], P("gold", 4)); }
+    headDiamond(img, base, tip, p, 2.4, "steel");
+    const c = add2(base, v, 3); img.set(c[0], c[1], P("royal", 4));
+  } },
+  shadowdagger: { name: "Shadow dagger", fx: SHADOW_FX, draw(img, K) { darkBlade(img, K.main.h, K.mainDir); } },
+});
+Object.assign(GEAR.off, {
+  shadowdagger: { name: "Off-hand shadow dagger", fx: SHADOW_FX, draw(img, K) { darkBlade(img, K.off.h, K.offDir); } },
+});
+Object.assign(GEAR.chest, {
+  holyvestments: { name: "Holy vestments", fx: { id: "holy/blessing", target: "body", element: "holy" }, draw(img, K) {
+    const { b, f } = K;
+    lathe(img, 18.5 + b, 60, K.tx, pw([[18.5 + b, 5.4], [21 + b, 6.6], [30 + b, 5.6], [40, 8], [60, 13.4]]), "ivory");
+    lathe(img, 17 + b, 24 + b, K.tx, pw([[17 + b, 5], [24 + b, 8.2]]), "gold", { bias: 0.1 });
+    rowTint(img, 59, 8, 41, (x) => P("gold", x < 22 ? 3 : 2)); rowTint(img, 57, 8, 41, (x, v) => v.r === "ivory" && P("gold", 4));
+    if (f) {
+      for (const sx of [-2.6, 2.6]) capsule(img, K.tx(24 + b) + sx, 24 + b, K.tx(56) + sx * 1.3, 56, 1.1, 1.3, "gold", { bias: sx < 0 ? 0.2 : -0.1 });
+      const c = [K.tx(28 + b) + 0.4, 28 + b]; ell(img, c[0], c[1], 1.8, 1.8, "gold", { bias: 0.3 });
+      for (let a = 0; a < 8; a++) img.set(c[0] + Math.cos((a * Math.PI) / 4) * 3, c[1] + Math.sin((a * Math.PI) / 4) * 3, P("gold", 4));
+    } else lathe(img, 22 + b, 58, K.tx, 1.6, "gold");
+  } },
+});
 const SLOTS = ["head", "shoulders", "chest", "arms", "legs", "back", "main", "off"];
 const ORDER = {
   front: ["back", "hair", "base", "legs", "chest", "limbs", "arms", "shoulders", "head", "off", "main"],
@@ -1096,6 +1142,14 @@ for (const k of Object.values(CLASSES)) k.loadout = k.tiers[2][2];
 // weapon variants shown on the stance and attack sheets
 const KNIGHT_GS = { ...CLASSES.knight.loadout, main: "greatsword", off: undefined };
 const LANCER_PH = { ...CLASSES.lancer.loadout, main: "shortspear", off: "shield" };
+// enchanted pilot loadouts: [key, name, loadout, body] — each wears one item with a live gear effect
+const ENCHANTED = [
+  ["flame-sword", "Flame sword", { ...CLASSES.knight.loadout, main: "flamesword" }, CLASSES.knight.body],
+  ["frost-staff", "Frost staff", { ...CLASSES.mage.loadout, main: "froststaff" }, CLASSES.mage.body],
+  ["storm-spear", "Storm spear", { ...CLASSES.lancer.loadout, main: "stormspear" }, CLASSES.lancer.body],
+  ["shadow-daggers", "Shadow daggers", { ...CLASSES.thief.loadout, main: "shadowdagger", off: "shadowdagger" }, CLASSES.thief.body],
+  ["holy-vestments", "Holy vestments", { ...CLASSES.cleric.tiers[1][2], chest: "holyvestments" }, CLASSES.cleric.body],
+];
 const bodyOf = (k, type) => (k.body.type === type ? k.body : k.alt);
 
 function layerImg(slot, id, view, bob, body, stance = "guard", pose = 0) {
@@ -1478,4 +1532,4 @@ function frame(style) {
 }
 
 setStyle("muted");
-export { FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
+export { ENCHANTED, FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };

@@ -9,7 +9,7 @@ const { encodePNG } = await import(pathToFileURL(`${LIB}/tools/lib/png.mjs`).hre
 mkdirSync(OUT, { recursive: true });
 
 import * as core from "../docs/lib/pixelrpg.js";
-const { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, R, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile, setCell, setPNGWriter, setStyle, STYLE, FACINGS, drawUnit } = core;
+const { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, R, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile, setCell, setPNGWriter, setStyle, STYLE, FACINGS, drawUnit, ENCHANTED } = core;
 setStyle(process.env.STYLE === "classic" ? "classic" : "muted"); // STYLE=classic npm run art for the original look
 setPNGWriter((file, w, h, rgba) => writeFileSync(`${OUT}/${file}`, encodePNG(w, h, rgba)));
 
@@ -280,4 +280,38 @@ console.log("ok", mapInfo);
     s.blit(drawUnit(k.loadout, f, 0, k.body), i * CW, r * SH);
   }));
   s.png("facings.png");
+}
+
+// enchanted gear preview: each pilot item idle (24 frames) then attacking (21 frames) at 15 fps, with its live
+// pixelfx gear effect (docs/lib/gearfx.js) wrapped around the item or the unit
+{
+  const pfx = await import(pathToFileURL(`${LIB}/src/core/index.js`).href);
+  const { GearFx, fxPieces, over, place } = await import("../docs/lib/gearfx.js");
+  const W = 112, H = 104, FEET = [56, 84], FPS = 15, IDLE = 24, ATTACK_MS = [560, 320, 200, 350];
+  const atkPose = []; ATTACK_MS.forEach((ms, p) => { for (let k = 0; k < Math.round((ms / 1000) * FPS); k++) atkPose.push(p); });
+  const N = IDLE + atkPose.length, sheet = new Uint8ClampedArray(N * W * ENCHANTED.length * H * 4), SW = N * W;
+  const ground = new Img(W, H); ground.blit(tile("grass", 1, 3), FEET[0] - HW, FEET[1] - HH);
+  const meta = {};
+  for (const [r, [key, name, lo, body]] of ENCHANTED.entries()) {
+    const pieces = fxPieces(lo, TWO_HANDED), mods = {};
+    for (const p of pieces) mods[p.spec.id] = await import(pathToFileURL(`${LIB}/src/fx/${p.spec.id}.js`).href);
+    const gfx = new GearFx(pfx, mods, W, H, FEET); gfx.sync(pieces);
+    const st = stanceOf(lo);
+    for (let f = 0; f < N; f++) {
+      const attack = f >= IDLE, pose = attack ? atkPose[f - IDLE] : 0, bob = attack ? 0 : Math.floor(f / 9) % 2;
+      setCell(attack ? 96 : CW, attack ? 24 : 0);
+      const unit = dress(lo, "front", bob, body, null, st, pose), cfx = attack ? 48 : 24;
+      const srcs = Object.fromEntries(pieces.map((p) => [`${p.slot}.${p.id}`, p.spec.target === "body" ? unit : layerImg(p.slot, p.id, "front", bob, body, st, pose)]));
+      if (f) gfx.step(1 / FPS);
+      const { back, front } = gfx.layers((it) => ({ img: srcs[`${it.slot}.${it.id}`], fx: cfx, fy: FY }));
+      setCell(CW, 0);
+      const img = ground.rgba(), u = place(new Uint8ClampedArray(W * H * 4), W, H, unit.rgba(), unit.w, unit.h, FEET[0] - cfx, FEET[1] - FY);
+      over(img, back); over(img, u); over(img, front);
+      for (let y = 0; y < H; y++) sheet.set(img.subarray(y * W * 4, (y + 1) * W * 4), ((r * H + y) * SW + f * W) * 4);
+    }
+    meta[key] = { name, row: r, effects: pieces.map((p) => ({ slot: p.slot, item: p.id, fx: p.spec.id, target: p.spec.target, element: p.spec.element })) };
+  }
+  writeFileSync(`${OUT}/gearfx.png`, encodePNG(SW, ENCHANTED.length * H, sheet));
+  writeFileSync(`${OUT}/gearfx.json`, JSON.stringify({ frameW: W, frameH: H, feet: FEET, fps: FPS, frames: N, idleFrames: IDLE, attackFrames: atkPose.length, rows: meta }, null, 1));
+  console.log("gear fx", Object.keys(meta).join(", "));
 }
