@@ -223,7 +223,9 @@ const STANCES = {
   guard:  { name: "Guard",  crouch: 2, lean: 0.07, main: { e: [19.6, 29.4], h: [24.8, 31.2] }, off: { e: [33.8, 27.4], h: [35.2, 31.4] }, mainDir: [0.42, -0.907], offDir: [0, -1] },
   caster: { name: "Caster", crouch: 1, lean: 0.05, main: { e: [18.6, 29.4], h: [22.2, 34] }, off: { e: [34.2, 24.4], h: [37.6, 20.8] }, mainDir: [0.3, -0.954], offDir: [0, -1] },
   archer: { name: "Archer", crouch: 1, lean: 0.04, main: { e: [14.8, 24.2], h: [23.4, 19.8] }, off: { e: [35, 23], h: [39.4, 23.6] }, mainDir: [0.6, -0.8], offDir: [0, -1] },
-  rogue:  { name: "Dual", crouch: 3, lean: 0.12, main: { e: [20.4, 30], h: [25.6, 32.6] }, off: { e: [33.6, 27.4], h: [36.6, 27.6] }, mainDir: [0.22, -0.975], offDir: [0.18, -0.984] },
+  // dual wield, after European sword-and-dagger (Bolognese / rapier-and-dagger): the off-hand dagger leads, held
+  // forward with its point up as a parry tool; the main weapon waits low at the hip, point raised toward the face
+  rogue:  { name: "Dual", crouch: 2, lean: 0.08, main: { e: [20, 31], h: [25.4, 33.6] }, off: { e: [33.8, 25], h: [38, 25.6] }, mainDir: [0.62, -0.785], offDir: [0.26, -0.966] },
   lancer: { name: "Lancer", crouch: 2, lean: 0.06, main: { e: [17.6, 30.2], h: [21.2, 36] }, off: { e: [33, 26.4], h: [29.4, 26.8] }, mainDir: [0.66, -0.751], offDir: [0.66, -0.751] },
   // two-handed sword: both hands on the grip (the off hand is placed on the grip by rig), blade up and forward
   greatsword: { name: "Greatsword", crouch: 2, lean: 0.08, main: { e: [20, 29], h: [25, 31.4] }, off: { e: [32.6, 26.8], h: [0, 0] }, mainDir: [0.5, -0.866], offDir: [0, -1] },
@@ -241,10 +243,11 @@ const ATK = {
   archer: [{ main: { e: [13.6, 23.4], h: [21.6, 19.6] } },
            { main: { e: [12.6, 21.6], h: [15.6, 17] } },
            { main: { e: [14.2, 24.4], h: [19.6, 21.6] } }],
-  // dual wield: blades raised apart (V), cut across each other (X), finish crossed with blades up
-  rogue: [{ main: { e: [17.6, 26.4], h: [20.4, 21] }, off: { e: [34.4, 23], h: [36.4, 19.6] }, mainDir: [-0.35, -0.937], offDir: [0.35, -0.937], lean: 0.06, dc: -1 },
-          { main: { e: [24.6, 29], h: [30.4, 30.4] }, off: { e: [36.2, 26], h: [38.2, 30.4] }, mainDir: [0.72, 0.694], offDir: [-0.6, 0.8], lean: 0.18, step: 3 },
-          { main: { e: [26, 31], h: [34.4, 33] }, off: { e: [33, 27.4], h: [28.6, 32.4] }, mainDir: [0.55, -0.835], offDir: [-0.55, -0.835], lean: 0.14, step: 2 }],
+  // dual wield, parry and riposte in one tempo: chamber the main weapon at the hip while the dagger rises to meet the
+  // blade; then lunge, the dagger sweeping high and out to deflect as the main arm thrusts fully; then recover to guard
+  rogue: [{ main: { e: [16.6, 29], h: [20.6, 31.6] }, off: { e: [33.6, 23.4], h: [37, 21.6] }, mainDir: [0.86, -0.51], offDir: [0.38, -0.925], lean: 0.04 },
+          { main: { e: [27, 27.4], h: [33.6, 27.2] }, off: { e: [32.2, 19.4], h: [33.8, 14.6] }, mainDir: [0.96, -0.28], offDir: [0.56, -0.83], lean: 0.2, dc: 1, step: 6 },
+          { main: { e: [22, 30], h: [28, 31] }, off: { e: [34.6, 23.6], h: [37.6, 23] }, mainDir: [0.8, -0.6], offDir: [0.3, -0.954], lean: 0.1, step: 2 }],
   // lancer: draw back, then a long lunge into the wide cell
   lancer: [{ main: { e: [14.6, 30.6], h: [17.4, 37] }, off: { e: [30.6, 27.8], h: [24, 29.5] }, lean: 0.02 },
            { main: { e: [22.4, 29.6], h: [27, 33] }, off: { e: [34.6, 22.8], h: [37.3, 26.9] }, mainDir: [0.86, -0.51], lean: 0.2, dc: 1, step: 6 },

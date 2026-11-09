@@ -19,14 +19,14 @@
   "effect": "melee/heavy-cleave",
   "impact": null
  },
- "thief-x": {
+ "thief-riposte": {
   "w": 208,
   "h": 120,
-  "frames": 25,
+  "frames": 26,
   "fps": 15,
   "hitFrame": 9,
-  "freeze": 1,
-  "effect": "melee/double-slash",
+  "freeze": 2,
+  "effect": "melee/thrust",
   "impact": null
  },
  "lancer-thrust": {

@@ -261,7 +261,7 @@ console.log("ok", mapInfo);
   const C = CLASSES;
   await clip("knight-slash", { lo: C.knight.loadout, body: C.knight.body, W: 208, H: 120, ux: 60, uy: 100, tx: 128, ty: 108, melee: { id: "melee/sword-slash", opts: { radius: 50, angle: 0.25 }, dx: 12, dy: -6 } });
   await clip("knight-greatsword", { lo: KNIGHT_GS, body: C.knight.body, W: 208, H: 120, ux: 60, uy: 100, tx: 128, ty: 108, melee: { id: "melee/heavy-cleave", opts: { angle: 0.2 }, dx: 2, dy: -6 } });
-  await clip("thief-x", { lo: C.thief.loadout, body: C.thief.body, W: 208, H: 120, ux: 60, uy: 100, tx: 124, ty: 108, melee: { id: "melee/double-slash", opts: { angle: 0.2 }, dx: 0, dy: -6 } });
+  await clip("thief-riposte", { lo: C.thief.loadout, body: C.thief.body, W: 208, H: 120, ux: 52, uy: 100, tx: 128, ty: 108, melee: { id: "melee/thrust", opts: { reach: 58, angle: -0.12, palette: ["#120a1e", "#24123a", "#3a1c5c", "#5a2c86", "#a970e0", "#d2b0f4", "#ffffff"] }, dx: 2, dy: -16 } });
   await clip("lancer-thrust", { lo: C.lancer.loadout, body: C.lancer.body, W: 208, H: 120, ux: 52, uy: 100, tx: 140, ty: 108, melee: { id: "melee/thrust", opts: { reach: 74, angle: -0.08 }, dx: 0, dy: -4 } });
   await clip("lancer-phalanx", { lo: LANCER_PH, body: C.lancer.body, W: 208, H: 120, ux: 52, uy: 100, tx: 136, ty: 108, melee: { id: "melee/thrust", opts: { reach: 66, angle: 0.05 }, dx: 0, dy: -12 } });
   await clip("mage-fireball", { lo: C.mage.loadout, body: C.mage.body, W: 256, H: 210, ux: 48, uy: 100, tx: 196, ty: 150, proj: { id: "fire/fireball", from: "off", speed: 16, impact: { id: "explosions/plasma-explosion", dy: -14, opts: { palette: ["#1e0c14", "#6e1c34", "#b0303e", "#e0604e", "#f0c85a", "#fff2b0", "#ffffff"], accent: ["#3a1428", "#6e1c34", "#e0604e", "#f6a07a", "#ffe0b8"] } } } });
