@@ -15,7 +15,7 @@ const SLOTS = [
 ];
 const KEYS = SLOTS.map(([k]) => k);
 const HAIRS = [["hair", "Brown"], ["crimson", "Red"], ["hairB", "Blue-black"], ["ink", "Black"], ["grey", "Grey"]];
-const STANCE_NAMES = { guard: "GUARD", caster: "CASTER", archer: "ARCHER", rogue: "DUAL WIELD", lancer: "LANCER (2H)", greatsword: "GREATSWORD (2H)", phalanx: "SPEAR & SHIELD" };
+const STANCE_NAMES = { guard: "GUARD", caster: "CASTER", archer: "ARCHER", rogue: "DUAL WIELD · SWORD & DAGGER", lancer: "LANCER (2H)", greatsword: "GREATSWORD (2H)", phalanx: "SPEAR & SHIELD" };
 // attack frame timing in ms: ready, wind-up, strike, follow-through
 const ATTACK_MS = [560, 320, 200, 350], IDLE_MS = [600, 600];
 
