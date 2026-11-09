@@ -18,7 +18,7 @@ The tools need Node 18 or newer. They use no packages.
 
 ## Web viewer (GitHub Pages)
 
-`docs/` is a static site: the Wardrobe. It draws units live in the browser with the same sprite code that makes the sheets. You can select class tiers, any gear piece, the male or female body, the hair colour and the SE or NW facing, and switch between the idle and the attack animation.
+`docs/` is a static site with two pages. The Wardrobe (`index.html`) draws units live in the browser with the same sprite code that makes the sheets. You can select class tiers, any gear piece, the male or female body, the hair colour and the facing, and switch between the idle and the attack animation. The battle demo (`battle.html`) is described below.
 
 To play live gear effects, the viewer needs the pixelfx source in `docs/pixelfx` (git-ignored). `npm run site` copies it there, and the Pages workflow runs the same step before it uploads the site.
 
@@ -28,6 +28,27 @@ To publish it, open the repository's **Settings → Pages**. Set **Source** to "
 npm run site
 python3 -m http.server --directory docs 8000
 ```
+
+## Battle demo
+
+`docs/battle.html` is a small playable battle on the demo map: six player units against six enemy units. The enemies use the same six classes as the player, with the middle gear tier and the other body type. There are no monsters.
+
+- **Stats:** each unit has health and attack only. Move and range come from the class.
+- **Facing:** damage = attack × side. An attack from the front does ×1, from the side ×1.25 and from the back ×1.5. The side comes from `attackSide` and the defender's facing. A unit turns to its target when it attacks and faces its last step when it moves. A unit that is hit does not turn. At the end of each action, the player selects the unit's facing; the map shows its front, side and back tiles.
+- **Turns:** a player phase, then an enemy phase. In a phase, each unit can move once and attack once.
+- **Map:** water and props block movement, and one step can go up or down 2 height levels at most.
+- **Enemy AI:** it tries every tile it can reach and takes the attack that does the most damage. A kill counts most, so it looks for side and back attacks. With no target in reach, it walks toward the nearest foe. At the end, it faces the nearest foe.
+
+| Class | Health | Attack | Move | Range |
+|---|---|---|---|---|
+| Knight | 42 | 10 | 3 | 1 |
+| Lancer | 36 | 11 | 4 | 1–2, straight line |
+| Thief | 28 | 9 | 5 | 1 |
+| Archer | 26 | 9 | 4 | 2–4 |
+| Mage | 22 | 12 | 3 | 2–3 |
+| Cleric | 30 | 7 | 3 | 1 |
+
+The rules are in `docs/lib/battle.js`, with no DOM. `npm test` runs `tools/battle-test.mjs`, which checks the facing math and the movement rules and plays a full battle with the AI on both sides. The map data is shared with `tools/art.mjs`, so `battle-map.png` shows the same ground.
 
 ## Make the sprites again
 
@@ -52,6 +73,9 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | `docs/lib/pixelrpg.js` | The sprite core: palette, skeleton, gear, stances, attacks, tiles, props, icons, UI frames. Pure JavaScript, used by both the generator and the web viewer |
 | `tools/art.mjs` | The generator: writes every sheet in `sprites/art`, the battle map and the combat clips |
 | `docs/index.html`, `docs/app.js` | The web viewer (Wardrobe) |
+| `docs/lib/battle.js` | The battle rules: demo map, class stats, movement, facing damage, turns, enemy AI. No DOM |
+| `docs/battle.html`, `docs/battle.js` | The battle demo page |
+| `tools/battle-test.mjs` | Tests for the battle rules (`npm test`) |
 | `tools/fx.mjs` | Renders the chosen pixelfx effects as one-row strips at 15 fps, recoloured with the system ramps |
 | `tools/zoom.mjs` | Nearest-neighbour preview of a PNG |
 | `sprites/art/` | Generated sheets and atlases, plus `gear.json` (atlas cells, shoulder and hem widths) and `art.json` |

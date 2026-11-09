@@ -10,6 +10,7 @@
   "scripts": {
     "art": "node tools/art.mjs",
     "fx": "node tools/fx.mjs",
-    "site": "node tools/site.mjs"
+    "site": "node tools/site.mjs",
+    "test": "node tools/battle-test.mjs"
   }
 }

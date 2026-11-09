@@ -9,6 +9,7 @@ const { encodePNG } = await import(pathToFileURL(`${LIB}/tools/lib/png.mjs`).hre
 mkdirSync(OUT, { recursive: true });
 
 import * as core from "../docs/lib/pixelrpg.js";
+import { terrain, height, PROPS as MAP_PROPS } from "../docs/lib/battle.js";
 const { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, R, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile, setCell, setPNGWriter, setStyle, STYLE, FACINGS, drawUnit, ENCHANTED } = core;
 setStyle(process.env.STYLE === "classic" ? "classic" : "muted"); // STYLE=classic npm run art for the original look
 setPNGWriter((file, w, h, rgba) => writeFileSync(`${OUT}/${file}`, encodePNG(w, h, rgba)));
@@ -102,25 +103,9 @@ function battle(file, { marks = true } = {}) {
   const N = 11, W = N * TW + HW, H = N * TH + 6 * STEP + 76;
   const img = new Img(W, H);
   const OX = N * HW - HW + 8, OY = 60, centers = {};
-  const hgt = (i, j) => {
-    if (j >= 5 && j <= 6 && i > 1) return 0; // river bed
-    if (i <= 2 && j <= 3) return 4;
-    if (i <= 3 && j <= 4) return 3;
-    if (i >= 8 && j >= 8) return 2;
-    if (i >= 7 && j <= 2) return 2;
-    return 1;
-  };
-  const ter = (i, j) => {
-    if (j >= 5 && j <= 6 && i > 1) return i === 5 ? "wood" : "water";
-    if (i <= 3 && j <= 4) return hgt(i, j) === 4 ? "cobble" : "moss";
-    if (j === 4 && i > 3 || i === 5 && j > 6) return "dirt";
-    if (i >= 8 && j >= 8) return "snow";
-    if (i >= 7 && j <= 2) return "sand";
-    return "grass";
-  };
-  const H2 = (i, j) => (ter(i, j) === "wood" ? 1 : hgt(i, j));
+  const ter = terrain, H2 = height; // the demo map, shared with the battle rules (docs/lib/battle.js)
   const units = { "3,7": ["knight", "SE"], "6,8": ["mage", "SE"], "0,5": ["archer", "SE"], "8,3": ["thief", "NE"], "2,9": ["cleric", "SE"], "1,1": ["lancer", "NE"] };
-  const props = { "1,10": "oak", "9,6": "oak", "10,1": "pine", "1,4": "banner", "8,9": "pine", "10,9": "pine", "6,10": "rock", "4,10": "bush", "3,3": "crystal", "9,0": "crate", "0,0": "chest", "6,2": "bush" };
+  const props = MAP_PROPS;
   const moveSet = new Set(["3,8", "4,7", "3,9", "2,8", "4,9", "5,8", "4,10", "2,7", "5,7"]);
   const atkSet = new Set(["3,6", "4,6"]);
   for (let s = 0; s <= 2 * (N - 1); s++) for (let i = 0; i < N; i++) {
