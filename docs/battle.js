@@ -1,5 +1,5 @@
 // Battle demo: draws the demo map and both teams live with the sprite core, and runs the rules in lib/battle.js.
-import { TW, TH, STEP, HW, HH, FX, FY, Img, tile, cursor, prop, drawUnit, setCell, stanceOf, FACINGS, facingToward, attackSide } from "./lib/pixelrpg.js";
+import { TW, TH, STEP, HW, HH, FX, FY, Img, tile, cursor, prop, drawUnit, setCell, stanceOf, FACING_DIR, facingToward, attackSide, TEAM_SCHEMES } from "./lib/pixelrpg.js";
 import * as B from "./lib/battle.js";
 
 const $ = (id) => document.getElementById(id);
@@ -47,12 +47,15 @@ function ringOf(team, facing) {
 }
 // unit sprites: idle frames in the 48 px cell, attack poses in the 96 px cell; each with a dim copy (done) and a white copy (hit)
 const sprites = new Map();
+let scheme = "crimson"; // enemy colours: a key of TEAM_SCHEMES, or "" for the gear's own colours
+try { const s = localStorage.getItem("pixelrpg.enemyScheme"); if (s !== null && (s === "" || TEAM_SCHEMES[s])) scheme = s; } catch (e) { /* storage blocked */ }
+const bodyOf = (u) => (u.team === "enemy" && scheme ? { ...u.body, scheme } : u.body);
 function spriteOf(u, facing, bob, pose) {
-  const atk = pose !== null, k = [u.id, facing, atk ? "a" + pose : "i" + bob].join("|");
+  const atk = pose !== null, k = [u.id, facing, atk ? "a" + pose : "i" + bob, u.team === "enemy" ? scheme : ""].join("|");
   if (!sprites.has(k)) {
     if (atk) setCell(96, 24);
     let img;
-    try { img = drawUnit(u.lo, facing, atk ? 0 : bob, u.body, stanceOf(u.lo), atk ? pose : 0); } finally { if (atk) setCell(48, 0); }
+    try { img = drawUnit(u.lo, facing, atk ? 0 : bob, bodyOf(u), stanceOf(u.lo), atk ? pose : 0); } finally { if (atk) setCell(48, 0); }
     const dim = (d) => { for (let i = 0; i < d.length; i += 4) { d[i] *= 0.55; d[i + 1] *= 0.55; d[i + 2] *= 0.62; } };
     const white = (d) => { for (let i = 0; i < d.length; i += 4) if (d[i + 3] === 255) d[i] = d[i + 1] = d[i + 2] = 255; };
     const d = img.rgba(); let top = 0;
@@ -90,10 +93,12 @@ function arcsAround(u, facing, marks) {
 function marksNow() {
   const m = new Map(), { mode, sel } = ui;
   if (ui.busy && mode !== "enemy") return m;
-  if (mode === "move") {
+  if (mode === "menu") {
+    if (!sel.moved) for (const k of ui.reach.keys()) m.set(k, "move");
+    if (!sel.acted) for (const t of B.targets(b, sel)) m.set(B.key(t.tile), "attack");
+  } else if (mode === "move") {
     for (const k of ui.reach.keys()) m.set(k, "move");
-    for (const t of B.targets(b, sel)) m.set(B.key(t.tile), "attack");
-  } else if (mode === "act" || mode === "confirm") {
+  } else if (mode === "target") {
     for (const t of B.rangeTiles(sel)) m.set(B.key(t), "attack");
   } else if (mode === "face") {
     arcsAround(sel, vis.get(sel.id).facing ?? sel.facing, m);
@@ -129,7 +134,7 @@ function draw() {
     const j = s - i; if (j < 0 || j >= N) continue;
     const k = `${i},${j}`, [tx, ty] = tileTop(i, j);
     ctx.drawImage(tileOf(i, j, marks.get(k) ?? null).c, tx, ty);
-    if ((cur && B.same(cur, [i, j])) || (ui.sel && B.same(ui.sel.tile, [i, j]) && ui.mode !== "enemy")) ctx.drawImage(cursorC, tx, ty);
+    if ((cur && B.same(cur, [i, j])) || ((ui.mode === "move" || ui.mode === "target") && B.same(ui.cursor, [i, j])) || (ui.sel && B.same(ui.sel.tile, [i, j]) && ui.mode !== "enemy")) ctx.drawImage(cursorC, tx, ty);
     if (B.PROPS[k]) ctx.drawImage(propOf(B.PROPS[k]), tx + HW - 20, ty + HH - 48);
     for (const u of byDepth.get(k) ?? []) {
       const v = vis.get(u.id), [fx, fy] = unitPos(u), facing = v.facing ?? u.facing;
@@ -232,22 +237,45 @@ async function attackAnim(u, t) {
 }
 
 // ---------- the player's turn ----------
+// Every step has a button (command menu, target picker, direction pad), so the game plays on a phone without
+// precise taps. Map taps and the keyboard still work as shortcuts.
+const ready = (u) => u && u.alive && u.team === "player" && !u.done;
 function select(u) {
-  Object.assign(ui, { mode: "move", sel: u, target: null, from: { tile: [...u.tile], facing: u.facing }, reach: B.reach(b, u) });
+  Object.assign(ui, { mode: "menu", sel: u, target: null, from: { tile: [...u.tile], facing: u.facing }, reach: B.reach(b, u), cursor: [...u.tile] });
   ui.info = u; refresh();
 }
 function deselect() { Object.assign(ui, { mode: "idle", sel: null, target: null, reach: null }); refresh(); }
+function nextUnit() {
+  const list = b.units.filter(ready), i = list.indexOf(ui.sel ?? ui.info);
+  if (list.length) select(list[(i + 1) % list.length]);
+}
+function toMenu() { if (ui.sel) vis.get(ui.sel.id).facing = null; ui.mode = "menu"; ui.target = null; ui.cursor = [...ui.sel.tile]; refresh(); }
+function startMove() { ui.mode = "move"; ui.cursor = [...ui.sel.tile]; refresh(); }
+function moveCursor([dc, dr]) {
+  const n = [ui.cursor[0] + dc, ui.cursor[1] + dr];
+  if (B.inside(n)) { ui.cursor = n; refresh(); }
+}
+const moveNode = () => ui.reach?.get(B.key(ui.cursor));
 async function moveTo(node) {
   ui.busy = true; refresh();
   await walk(ui.sel, node.path);
   B.moveAlong(b, ui.sel, node.path);
-  ui.busy = false; ui.mode = "act"; refresh();
+  ui.busy = false; toMenu();
 }
 function undoMove() {
   const u = ui.sel; u.tile = [...ui.from.tile]; u.facing = ui.from.facing; u.moved = false;
   select(u);
 }
-function aim(t) { ui.target = t; ui.back = ui.mode; ui.mode = "confirm"; refresh(); }
+// targets in range, the hardest hit first
+const targetList = () => B.targets(b, ui.sel).sort((p, q) => B.preview(b, ui.sel, q).dmg - B.preview(b, ui.sel, p).dmg);
+function startTarget(t = null) {
+  const list = targetList(); if (!list.length) return;
+  ui.mode = "target"; ui.target = t ?? list[0]; ui.cursor = [...ui.target.tile]; refresh();
+}
+function cycleTarget(d) {
+  const list = targetList(), i = list.indexOf(ui.target);
+  ui.target = list[(i + d + list.length) % list.length]; ui.cursor = [...ui.target.tile]; refresh();
+}
 async function attack() {
   const u = ui.sel, t = ui.target;
   ui.busy = true; refresh();
@@ -258,7 +286,7 @@ async function attack() {
 }
 function startFacing() {
   const u = ui.sel, foe = B.nearestFoe(b, u);
-  ui.mode = "face"; ui.target = null;
+  ui.mode = "face"; ui.target = null; ui.cursor = [...u.tile];
   vis.get(u.id).facing = foe ? facingToward(u.tile, foe.tile) : u.facing;
   refresh();
 }
@@ -270,26 +298,30 @@ function done() {
   if (b.units.every((x) => !x.alive || x.team !== "player" || x.done)) endTurn();
 }
 function back() {
-  if (ui.busy) return;
-  if (ui.mode === "confirm") { ui.mode = ui.back; ui.target = null; refresh(); }
-  else if (ui.mode === "act") undoMove();
-  else if (ui.mode === "move") deselect();
+  if (ui.busy || !ui.sel) return;
+  if (ui.mode === "move" || ui.mode === "target") toMenu();
+  else if (ui.mode === "face" && !ui.sel.acted) toMenu();
+  else if (ui.mode === "menu") { if (ui.sel.moved) undoMove(); else deselect(); }
 }
 function click(t) {
   if (ui.busy || b.phase !== "player" || !t) return;
-  ui.cursor = t;
   const u = B.unitAt(b, t), { mode, sel } = ui;
-  const foeInRange = u && sel && u.team !== sel.team && B.inRange(sel, sel.tile, u.tile);
-  if (mode === "idle") { if (u && u.team === "player" && !u.done) select(u); else { ui.info = u ?? null; refresh(); } }
-  else if (mode === "move") {
-    if (u && u.team === "player" && u !== sel && !u.done) select(u);
-    else if (u === sel) { ui.mode = "act"; sel.moved = true; refresh(); }
-    else if (foeInRange) aim(u);
-    else if (ui.reach.has(B.key(t))) moveTo(ui.reach.get(B.key(t)));
-    else deselect();
-  } else if (mode === "act") { if (foeInRange) aim(u); }
-  else if (mode === "confirm") { if (u === ui.target) attack(); else if (foeInRange) aim(u); else back(); }
-  else if (mode === "face") { if (B.same(t, sel.tile)) done(); else { setFacing(facingToward(sel.tile, t)); done(); } }
+  const foeInRange = u && sel && !sel.acted && u.team !== sel.team && B.inRange(sel, sel.tile, u.tile);
+  if (mode === "idle") { ui.cursor = t; if (ready(u)) select(u); else { ui.info = u ?? null; refresh(); } }
+  else if (mode === "menu") {
+    if (ready(u) && u !== sel && !sel.moved) select(u);
+    else if (foeInRange) startTarget(u);
+    else if (!sel.moved && ui.reach.has(B.key(t))) { ui.cursor = t; moveTo(ui.reach.get(B.key(t))); }
+    else if (!u && !sel.moved) deselect();
+  } else if (mode === "move") {
+    // first tap puts the cursor on the tile, a second tap on the same tile moves (Enter does the same)
+    if (B.same(t, ui.cursor) && moveNode()) moveTo(moveNode());
+    else { ui.cursor = t; refresh(); }
+  } else if (mode === "target") {
+    if (u && u === ui.target) attack();
+    else if (foeInRange) startTarget(u);
+    else { ui.cursor = t; refresh(); }
+  } else if (mode === "face") { if (!B.same(t, sel.tile)) setFacing(facingToward(sel.tile, t)); done(); }
 }
 function hover(t) {
   const changed = !(t && ui.hover && B.same(t, ui.hover)) && (t || ui.hover);
@@ -352,8 +384,8 @@ function unitCard(u) {
 }
 function previewCard() {
   const { sel } = ui;
-  let t = ui.mode === "confirm" ? ui.target : null;
-  if (!t && sel && (ui.mode === "move" || ui.mode === "act") && ui.hover) { const h = B.unitAt(b, ui.hover); if (h && h.team !== sel.team && B.inRange(sel, sel.tile, h.tile)) t = h; }
+  let t = ui.mode === "target" ? ui.target : null;
+  if (!t && sel && ui.mode === "menu" && !sel.acted && ui.hover) { const h = B.unitAt(b, ui.hover); if (h && h.team !== sel.team && B.inRange(sel, sel.tile, h.tile)) t = h; }
   if (ui.busy) t = null;
   $("previewCard").hidden = !t;
   if (!t) return;
@@ -364,34 +396,59 @@ function previewCard() {
   $("preview").querySelector(".tn").textContent = t.name;
 }
 const HELP = {
-  idle: "Select one of your units (blue ring). Units in grey are done for this turn.",
-  move: "Select a blue tile to move there, or a red enemy to attack from here. Select the unit again to stay in place.",
-  act: "Select an enemy in the red area to attack it, or Wait to pick a facing.",
-  confirm: "Select the target again, or Attack, to hit. The preview shows the damage.",
-  face: "Point where the unit must face, then select. The blue, gold and red tiles show its front, side and back.",
+  idle: "Select one of your units (blue ring), or use Next unit. Units in grey are done for this turn.",
+  menu: "Select a command. You can also tap a blue tile to move there, or a red enemy to attack it.",
+  move: "Put the cursor on a blue tile with the arrows or a tap, then Move here. Tap the same tile again to move.",
+  target: "Select the target with Previous and Next, or tap an enemy. The preview shows the damage. Then Attack.",
+  face: "Select where the unit faces, then Done. The blue, gold and red tiles show its front, side and back.",
   enemy: "The enemy moves.",
 };
+const GLYPH = { NW: "↖", NE: "↗", SW: "↙", SE: "↘" };
+// a diamond of four diagonal buttons (the screen directions of the four facings) around a centre button
+function pad(label, onDir, center, centerOn, pressed = null) {
+  const el = document.createElement("div"); el.className = "pad"; el.setAttribute("role", "group"); el.setAttribute("aria-label", label);
+  for (const f of ["NW", "NE", "SW", "SE"]) { const c = chip(`${GLYPH[f]} ${f}`, () => onDir(f), pressed ? { pressed: pressed === f } : {}); c.classList.add("d-" + f); el.append(c); }
+  const c = chip(center, centerOn, { main: true, disabled: !centerOn }); c.classList.add("d-c"); el.append(c);
+  return el;
+}
 function refresh() {
   const { mode, sel } = ui;
   $("turn").innerHTML = `Round ${b.round} · <span class="ph ${b.phase}">${b.phase === "player" ? "Player phase" : "Enemy phase"}</span>`;
   let help = HELP[mode] ?? "";
-  if (mode === "act" && sel && !B.targets(b, sel).length) help = "No enemy is in range from here. Wait to pick a facing, or undo the move.";
+  if (mode === "menu" && sel?.moved && !B.targets(b, sel).length) help = "No enemy is in range from here. Wait to select a facing, or undo the move.";
+  if (mode === "move" && !moveNode()) help = "The cursor is not on a blue tile. Move it with the arrows, or tap a blue tile.";
   $("help").textContent = ui.busy && mode !== "enemy" ? "" : help;
-  const a = [];
-  if (!ui.busy && sel && b.phase === "player") {
-    if (mode === "move") a.push(chip("Stay here", () => { ui.mode = "act"; sel.moved = true; refresh(); }), chip("Wait", () => { sel.moved = true; startFacing(); }), chip("Cancel", deselect));
-    if (mode === "act") a.push(chip("Wait", startFacing, { main: !B.targets(b, sel).length }), chip("Undo move", undoMove));
-    if (mode === "confirm") a.push(chip("Attack", attack, { main: true }), chip("Cancel", back));
-    if (mode === "face") {
-      const f = vis.get(sel.id).facing ?? sel.facing;
-      a.push(...FACINGS.map((x) => chip(`Face ${x}`, () => setFacing(x), { pressed: f === x })), chip("Done", done, { main: true }));
+  const a = [], player = !ui.busy && b.phase === "player";
+  if (player && !sel && mode === "idle") a.push(chip("Next unit", nextUnit, { main: true, disabled: !b.units.some(ready) }));
+  if (player && sel) {
+    const row = document.createElement("div"); row.className = "row";
+    if (mode === "menu") {
+      const n = sel.acted ? 0 : B.targets(b, sel).length;
+      row.append(chip("Move", startMove, { disabled: sel.moved }), chip(n ? `Attack · ${n} in range` : "Attack", () => startTarget(), { disabled: !n }),
+        chip("Wait", startFacing), sel.moved ? chip("Undo move", undoMove) : chip("Cancel", deselect));
+      if (!sel.moved && b.units.filter(ready).length > 1) row.append(chip("Next unit", nextUnit));
     }
+    if (mode === "move") {
+      row.append(chip("Back", toMenu));
+      a.push(row, pad("Move the cursor", (f) => moveCursor(FACING_DIR[f]), "Move here", moveNode() ? () => moveTo(moveNode()) : null));
+    }
+    if (mode === "target") {
+      const many = targetList().length > 1;
+      row.append(chip("◀ Previous", () => cycleTarget(-1), { disabled: !many }), chip("Next ▶", () => cycleTarget(1), { disabled: !many }), chip("Attack", attack, { main: true }), chip("Back", toMenu));
+    }
+    if (mode === "face") {
+      if (!sel.acted) row.append(chip("Back", toMenu));
+      a.push(pad("Select the facing", setFacing, "Done", done, vis.get(sel.id).facing ?? sel.facing));
+    }
+    if (row.childNodes.length) a.unshift(row);
   }
   $("actions").replaceChildren(...a);
   $("endTurn").disabled = ui.busy || b.phase !== "player";
   $("restart").disabled = ui.busy && ui.mode !== "over";
   const h = ui.hover && B.unitAt(b, ui.hover);
   unitCard(h || ui.info || sel || null);
+  $("schemes").replaceChildren(...[...Object.entries(TEAM_SCHEMES).map(([k, v]) => [k, v.name]), ["", "Own gear colours"]].map(([k, name]) =>
+    chip(name, () => { scheme = k; try { localStorage.setItem("pixelrpg.enemyScheme", k); } catch (e) { /* storage blocked */ } refresh(); }, { pressed: scheme === k })));
   previewCard();
   log();
 }

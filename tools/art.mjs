@@ -300,3 +300,16 @@ console.log("ok", mapInfo);
   writeFileSync(`${OUT}/gearfx.json`, JSON.stringify({ frameW: W, frameH: H, feet: FEET, fps: FPS, frames: N, idleFrames: IDLE, attackFrames: atkPose.length, rows: meta }, null, 1));
   console.log("gear fx", Object.keys(meta).join(", "));
 }
+
+// team colours: row 0 the player side (top tier, default body); rows 1-4 the enemy side (middle tier, other body)
+// with no scheme, then each team scheme. SE idle, 48 x 76 per cell, one column per class.
+{
+  const keys = Object.keys(CLASSES), rows = [["player", null], ["enemy", null], ...Object.keys(core.TEAM_SCHEMES).map((s) => ["enemy", s])];
+  const s = new Img(keys.length * CW, rows.length * CH);
+  rows.forEach(([side, scheme], r) => keys.forEach((key, i) => {
+    const k = CLASSES[key], lo = side === "player" ? k.loadout : k.tiers[1][2], body = side === "player" ? k.body : { ...k.alt, scheme };
+    s.blit(drawUnit(lo, "SE", 0, body), i * CW, r * CH);
+  }));
+  s.png("teams.png");
+  console.log("teams", rows.map(([a, b]) => b ?? a).join(", "));
+}

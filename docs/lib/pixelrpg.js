@@ -1175,10 +1175,35 @@ function dress(loadout, view, bob = 0, body = {}, only = null, stance = stanceOf
     const id = BODYSLOT(slot) ? slot : loadout[slot];
     if (!id) continue;
     if (slot === "off" && TWO_HANDED.includes(loadout.main)) continue; // two-handed weapons use both hands
-    const l = layerImg(slot, id, view, bob, body, stance, pose);
+    let l = layerImg(slot, id, view, bob, body, stance, pose);
+    if (l && body.scheme && !BODYSLOT(slot)) l = recolor(l, body.scheme); // team colours dye the gear, not the skin or hair
     if (l) out.blit(l, 0, 0);
   }
   return out;
+}
+
+// ---------- team colour schemes ----------
+// A scheme swaps the dyed ramps of the gear layers (cloth, trim, metal), so one side reads apart from the other
+// at a glance. Leather, skin and hair keep their colours. Use it as body.scheme in dress() and drawUnit().
+const SCHEME_RAMPS = {
+  blood:  ["#160607", "#4e1214", "#7e1f1d", "#a8382c", "#cc6a52"],
+  char:   ["#0b090b", "#1f1a1f", "#332c33", "#4c434c", "#6e636c"],
+  iron:   ["#09090c", "#24252c", "#3c3e48", "#5c606c", "#8c919c"],
+  ash:    ["#121014", "#3a363c", "#5a555c", "#7e787e", "#a8a1a4"],
+  moss:   ["#07100a", "#18341c", "#285230", "#447a40", "#7eaa62"],
+  bone:   ["#1a160e", "#6a604a", "#9c906e", "#c4b892", "#e8dec0"],
+  bronze: ["#140c06", "#4a3018", "#78522a", "#a67c40", "#d0aa6a"],
+};
+const TEAM_SCHEMES = {
+  crimson: { name: "Crimson", map: { royal: "blood", arcane: "blood", teal: "blood", forest: "blood", crimson: "blood", ivory: "char", steel: "iron" } },
+  ebony:   { name: "Ebony", map: { royal: "char", arcane: "char", teal: "char", forest: "char", crimson: "char", ivory: "ash", steel: "iron" } },
+  verdant: { name: "Verdant", map: { royal: "moss", arcane: "moss", teal: "moss", forest: "moss", crimson: "moss", ivory: "bone", steel: "bronze", gold: "bronze" } },
+};
+function recolor(img, scheme) {
+  const m = TEAM_SCHEMES[scheme]?.map; if (!m) return img;
+  const o = new Img(img.w, img.h);
+  o.c = img.c.map((v) => (v && v.r && m[v.r] ? { hex: SCHEME_RAMPS[m[v.r]][v.i], ...(v.a !== undefined ? { a: v.a } : {}) } : v));
+  return o;
 }
 function makeSprite(key, view, bob = 0) { const k = CLASSES[key]; return dress(k.loadout, view, bob, k.body); }
 
@@ -1535,4 +1560,4 @@ function frame(style) {
 }
 
 setStyle("muted");
-export { ENCHANTED, FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
+export { TEAM_SCHEMES, SCHEME_RAMPS, recolor, ENCHANTED, FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
