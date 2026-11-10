@@ -108,7 +108,7 @@ footer { max-width: 1500px; margin: 0 auto; padding: 0 24px 40px; color: var(--d
       <div class="unit" id="unit"></div>
     </div>
     <div class="card" id="previewCard" hidden>
-      <div class="label">ATTACK PREVIEW</div>
+      <div class="label">PREVIEW</div>
       <div class="preview" id="preview"></div>
     </div>
     <div class="card">
@@ -121,7 +121,8 @@ footer { max-width: 1500px; margin: 0 auto; padding: 0 24px 40px; color: var(--d
       <ul class="rules">
         <li><b>Damage</b> = attack × side. <b>Front</b> ×1, <b>side</b> ×1.25, <b>back</b> ×1.5.</li>
         <li>A unit turns to its target when it attacks. When it moves, it faces the direction of its last step. A unit that is hit does not turn.</li>
-        <li>Each turn, every unit can move once and attack once. Then it selects a facing.</li>
+        <li>Each turn, every unit can move once and act once: attack, or use a skill. Then it selects a facing.</li>
+        <li><b>Skills</b> use MP, which does not come back during the battle. <b>Heal</b> (cleric, 6 MP) gives one ally up to 14 HP. <b>Fireball</b> (mage, 8 MP) does 10 damage × side to every unit on the target tile and the 4 tiles next to it, your own units too.</li>
         <li>Water and props block movement. One step can go up or down 2 height levels at most.</li>
       </ul>
       <label class="toggle"><input type="checkbox" id="arcs" checked> Show the facing arcs of the unit under the cursor</label>

@@ -1287,7 +1287,8 @@ function tile(type, h, seed = 0, mark = null) {
   return img;
 }
 const MARK = { move: ["#5e9ae0", "#a8d4f4"], attack: ["#e0604e", "#f6a07a"], ally: ["#5c9a48", "#a4cc6a"],
-  front: ["#5e9ae0", "#a8d4f4"], side: ["#c69746", "#e6c679"], back: ["#e0604e", "#f6a07a"] };
+  front: ["#5e9ae0", "#a8d4f4"], side: ["#c69746", "#e6c679"], back: ["#e0604e", "#f6a07a"],
+  area: ["#e8862c", "#ffd27a"] }; // area: the tiles a skill like Fireball will hit
 function markTop(img, kind) {
   const [fill, edge] = MARK[kind];
   for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
