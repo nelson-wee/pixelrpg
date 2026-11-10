@@ -1,7 +1,11 @@
-// Battle rules for the demo: one map, two teams built on the same classes, health and attack only.
+// Battle rules for the demo: one map, two teams of characters, health, attack and skills.
 // Facing is part of the rules: an attack from the side or the back of a unit does more damage.
+// A battle places characters (docs/lib/character.js) on the map as units. A unit copies the character's stats
+// and skills at the start, then keeps its own tile, facing, health and MP; the character does not change.
 // Pure logic with no DOM. The web page (docs/battle.js) and the Node test (tools/battle-test.mjs) share it.
-import { CLASSES, FACING_DIR, facingToward, attackSide } from "./pixelrpg.js";
+import { FACING_DIR, facingToward, attackSide } from "./pixelrpg.js";
+import { makeCharacter } from "./character.js";
+import { presetLook } from "./presets.js";
 
 // ---------- the demo map: the same ground as sprites/art/battle-map.png ----------
 export const N = 11;
@@ -26,17 +30,6 @@ export const height = (i, j) => (terrain(i, j) === "wood" ? 1 : hill(i, j));
 export const PROPS = { "1,10": "oak", "9,6": "oak", "10,1": "pine", "1,4": "banner", "8,9": "pine", "10,9": "pine", "6,10": "rock", "4,10": "bush", "3,3": "crystal", "9,0": "crate", "0,0": "chest", "6,2": "bush" };
 
 // ---------- units ----------
-// One stat table per class. Both teams use it: the enemies are built on the same classes as the player's units.
-// range is [min, max] in grid steps; line means the target must be on the same row or column (spear reach).
-// mp pays for skills; a class with no skills has no MP.
-export const STATS = {
-  knight: { hp: 42, atk: 10, move: 3, range: [1, 1] },
-  lancer: { hp: 36, atk: 11, move: 4, range: [1, 2], line: true },
-  thief:  { hp: 28, atk: 9, move: 5, range: [1, 1] },
-  archer: { hp: 26, atk: 9, move: 4, range: [2, 4] },
-  mage:   { hp: 22, atk: 12, move: 3, range: [2, 3], mp: 20, skills: ["fireball"] },
-  cleric: { hp: 30, atk: 7, move: 3, range: [1, 1], mp: 18, skills: ["heal"] },
-};
 // Skills: a second kind of action. A skill uses MP and takes the unit's action for the turn, like an attack.
 // target "ally": one allied unit in range (range 0 is the caster). target "tile": any tile in range.
 // area "plus": the target tile and its four grid neighbours (no diagonals). friendly: the area also hits allies.
@@ -48,37 +41,39 @@ export const JUMP = 2;                                   // the largest height c
 export const SIDE_MULT = { front: 1, side: 1.25, back: 1.5 };
 export const RANGED = (u) => u.range[1] > 1 && !u.line; // archers and mages shoot; the lancer's reach is melee
 
-// [id, team, class, name, tile]. Player units wear their class's top tier and the default body.
-// Enemy units wear the middle tier and the other body, so the two sides read apart.
-export const ROSTER = [
-  ["p-knight", "player", "knight", "Aldric", [4, 7]],
-  ["p-lancer", "player", "lancer", "Bran", [2, 7]],
-  ["p-thief", "player", "thief", "Corin", [6, 7]],
-  ["p-archer", "player", "archer", "Dera", [1, 8]],
-  ["p-mage", "player", "mage", "Elin", [3, 9]],
-  ["p-cleric", "player", "cleric", "Fara", [5, 8]],
-  ["e-knight", "enemy", "knight", "Vexa", [5, 3]],
-  ["e-lancer", "enemy", "lancer", "Ilsa", [7, 3]],
-  ["e-thief", "enemy", "thief", "Nyx", [8, 2]],
-  ["e-archer", "enemy", "archer", "Hal", [1, 2]],
-  ["e-mage", "enemy", "mage", "Oren", [2, 1]],
-  ["e-cleric", "enemy", "cleric", "Tobin", [5, 1]],
+// The demo teams, as character definitions. Your party wears each archetype's top-tier look with the default
+// body. The foes use the same archetypes in the middle-tier look with the other body, so the two sides read apart.
+const member = (id, name, archetype, tier = 2, alt = false) => ({ id, name, archetype, look: presetLook(archetype, tier, alt), talents: [] });
+export const DEMO_PARTY = [
+  member("p-knight", "Aldric", "knight"), member("p-lancer", "Bran", "lancer"), member("p-thief", "Corin", "thief"),
+  member("p-archer", "Dera", "archer"), member("p-mage", "Elin", "mage"), member("p-cleric", "Fara", "cleric"),
+];
+export const DEMO_FOES = [
+  member("e-knight", "Vexa", "knight", 1, true), member("e-lancer", "Ilsa", "lancer", 1, true), member("e-thief", "Nyx", "thief", 1, true),
+  member("e-archer", "Hal", "archer", 1, true), member("e-mage", "Oren", "mage", 1, true), member("e-cleric", "Tobin", "cleric", 1, true),
+];
+// where each character starts: { character, team, tile, facing? }
+const PARTY_TILES = [[4, 7], [2, 7], [6, 7], [1, 8], [3, 9], [5, 8]], FOE_TILES = [[5, 3], [7, 3], [8, 2], [1, 2], [2, 1], [5, 1]];
+export const DEMO_ROSTER = [
+  ...DEMO_PARTY.map((character, i) => ({ character, team: "player", tile: PARTY_TILES[i] })),
+  ...DEMO_FOES.map((character, i) => ({ character, team: "enemy", tile: FOE_TILES[i] })),
 ];
 export const START_FACING = { player: "NE", enemy: "SW" };
 
-export function newBattle(roster = ROSTER) {
-  const units = roster.map(([id, team, cls, name, tile]) => {
-    const k = CLASSES[cls], s = STATS[cls], player = team === "player";
-    return {
-      id, team, cls, name, className: k.name,
-      lo: { ...(player ? k.loadout : k.tiers[1][2]) }, body: player ? k.body : k.alt, gear: player ? k.tiers[2][0] : k.tiers[1][0],
-      tile: [...tile], facing: START_FACING[team],
-      hp: s.hp, maxHp: s.hp, atk: s.atk, move: s.move, range: s.range, line: !!s.line,
-      mp: s.mp ?? 0, maxMp: s.mp ?? 0, skills: [...(s.skills ?? [])],
-      alive: true, moved: false, acted: false, done: false,
-    };
-  });
-  return { round: 1, phase: "player", units, log: [] };
+/** A unit from a placed character. The character may be a definition or a made character. */
+export function placeUnit({ character, team, tile, facing }) {
+  const c = character.stats ? character : makeCharacter(character), st = c.stats;
+  return {
+    id: c.id, team, name: c.name, archetype: c.archetype, className: c.className, character: c,
+    lo: { ...c.look.loadout }, body: { ...c.look.body }, gear: c.look.name, projectile: c.projectile,
+    tile: [...tile], facing: facing ?? START_FACING[team],
+    hp: st.hp, maxHp: st.hp, atk: st.atk, move: st.move, range: [...st.range], line: st.line,
+    mp: st.mp, maxMp: st.mp, skills: [...c.skills],
+    alive: true, moved: false, acted: false, done: false,
+  };
+}
+export function newBattle(roster = DEMO_ROSTER) {
+  return { round: 1, phase: "player", units: roster.map(placeUnit), log: [] };
 }
 
 // ---------- grid helpers ----------

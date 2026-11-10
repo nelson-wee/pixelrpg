@@ -1,6 +1,7 @@
 // Wardrobe viewer: draws a unit live with the sprite core and plays its idle or attack animation.
-import { CLASSES, KNIGHT_GS, LANCER_PH, ENCHANTED, TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0, FACINGS, FACING_VIEW, drawUnit, turn, attackSide } from "./lib/pixelrpg.js";
+import { TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0, FACINGS, FACING_VIEW, drawUnit, turn, attackSide } from "./lib/pixelrpg.js";
 import { GearFx, fxPieces, over, place } from "./lib/gearfx.js";
+import { LOOKS, KNIGHT_GS, LANCER_PH, ENCHANTED } from "./lib/presets.js";
 
 // short chip labels for every piece, by slot
 const SLOTS = [
@@ -20,7 +21,7 @@ const STANCE_NAMES = { guard: "GUARD", caster: "CASTER", archer: "ARCHER", rogue
 const ATTACK_MS = [560, 320, 200, 350], IDLE_MS = [600, 600];
 
 // presets: every class's three tiers, plus the two weapon variants
-const PRESETS = Object.entries(CLASSES).map(([key, k]) => {
+const PRESETS = Object.entries(LOOKS).map(([key, k]) => {
   const tiers = k.tiers.map(([name, mat, lo], i) => ({ name, label: `${k.name} · T${i + 1} ${name} (${mat})`, lo, body: k.body }));
   if (key === "knight") tiers.push({ name: "Greatsword", label: "Knight · Greatsword", lo: KNIGHT_GS, body: k.body });
   if (key === "lancer") tiers.push({ name: "Phalanx", label: "Lancer · Spear & shield", lo: LANCER_PH, body: k.body });
@@ -30,7 +31,7 @@ const PRESETS = Object.entries(CLASSES).map(([key, k]) => {
 // enchanted pilot items: each loadout wears one piece that carries a live pixelfx effect
 PRESETS.push({ cls: "Enchanted", tiers: ENCHANTED.map(([key, name, lo, body]) => ({ name, label: `Enchanted · ${name}`, lo, look: { body: body.type, hair: body.hair, beard: false } })) });
 
-const state = { lo: { ...CLASSES.knight.loadout }, body: "m", hair: "hair", beard: false, facing: "SE", mode: "idle", style: STYLE.name, fx: true };
+const state = { lo: { ...LOOKS.knight.loadout }, body: "m", hair: "hair", beard: false, facing: "SE", mode: "idle", style: STYLE.name, fx: true };
 const clean = (lo) => Object.fromEntries(KEYS.filter((k) => lo[k]).map((k) => [k, lo[k]]));
 const same = (a, b) => KEYS.every((k) => (a[k] || null) === (b[k] || null));
 

@@ -51,6 +51,8 @@ python3 -m http.server --directory docs 8000
 | Mage | 22 | 20 | 12 | 3 | 2–3 | Fireball |
 | Cleric | 30 | 18 | 7 | 3 | 1 | Heal |
 
+**Characters and units.** A *character* is the part of a unit that lives between battles; later, a roguelike run keeps a party of them and rebuilds them before each battle. A character definition is plain data: `{ id, name, archetype, look: { name, loadout, body }, talents: [] }`. `makeCharacter()` derives the stats and skills from the archetype (and, later, from the talents). The look is separate, so any character can wear any gear: a knight in a mage's robe keeps knight stats. A battle places characters on the map as *units* with `{ character, team, tile, facing }`. A unit copies the stats at the start and keeps its own tile, facing, health and MP, so a battle never changes the character.
+
 The rules are in `docs/lib/battle.js`, with no DOM. `npm test` runs `tools/battle-test.mjs`, which checks the facing math, the movement rules and the skills (MP cost, heal limit, plus-shaped area, friendly fire), and plays a full battle with the AI on both sides. The map data is shared with `tools/art.mjs`, so `battle-map.png` shows the same ground.
 
 ## Make the sprites again
@@ -76,7 +78,9 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | `docs/lib/pixelrpg.js` | The sprite core: palette, skeleton, gear, stances, attacks, tiles, props, icons, UI frames. Pure JavaScript, used by both the generator and the web viewer |
 | `tools/art.mjs` | The generator: writes every sheet in `sprites/art`, the battle map and the combat clips |
 | `docs/index.html`, `docs/app.js` | The web viewer (Wardrobe) |
-| `docs/lib/battle.js` | The battle rules: demo map, class stats, skills and MP, movement, facing damage, turns, enemy AI. No DOM |
+| `docs/lib/presets.js` | Look presets: the named gear sets and bodies of each archetype in three tiers, the weapon variants and the enchanted pilot loadouts. Looks only, no stats |
+| `docs/lib/character.js` | Characters: archetypes (base stats, skills, projectile) and `makeCharacter`, which turns a character definition into a character with derived stats. No DOM |
+| `docs/lib/battle.js` | The battle rules: demo map, demo teams, skills and MP, movement, facing damage, turns, enemy AI. No DOM |
 | `docs/battle.html`, `docs/battle.js` | The battle demo page |
 | `tools/battle-test.mjs` | Tests for the battle rules (`npm test`) |
 | `tools/fx.mjs` | Renders the chosen pixelfx effects as one-row strips at 15 fps, recoloured with the system ramps |

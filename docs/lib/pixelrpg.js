@@ -1114,47 +1114,6 @@ const ORDER = {
   back: ["main", "off", "limbs", "arms", "base", "legs", "chest", "back", "hair", "shoulders", "head"],
 };
 
-// classes: default body, the other body, and three tiers (the last is the class's showcase look)
-const CLASSES = {
-  knight: { name: "Knight", role: "Vanguard", shape: "V", body: { type: "m", hair: "hair" }, alt: { type: "f", hair: "crimson" }, tiers: [
-    ["Squire", "Leather", { head: "leathercap", shoulders: "leatherpads", chest: "leatherarmor", arms: "bracers", legs: "trousers", main: "sword", off: "buckler" }],
-    ["Sergeant", "Chain", { head: "coif", shoulders: "halfpauldrons", chest: "chainK", arms: "mail", legs: "chausses", main: "sword", off: "shield" }],
-    ["Knight", "Plate", { head: "greathelm", shoulders: "pauldrons", chest: "plate", arms: "gauntlets", legs: "greaves", back: "cape", main: "sword", off: "shield" }]] },
-  mage: { name: "Mage", role: "Elemental caster", shape: "A", body: { type: "f", hair: "hairB" }, alt: { type: "m", hair: "hairB" }, tiers: [
-    ["Apprentice", "Cloth", { head: "cap", chest: "shortrobe", arms: "magesleeves", legs: "trousers", main: "rod" }],
-    ["Adept", "Robe", { head: "magehood", chest: "simplerobe", arms: "magesleeves", main: "staff" }],
-    ["Archmage", "Regalia", { head: "wizhat", shoulders: "collar", chest: "robe", arms: "bell", main: "staff" }]] },
-  archer: { name: "Archer", role: "Ranged skirmisher", shape: "I", body: { type: "f", hair: "crimson" }, alt: { type: "m", hair: "hair" }, tiers: [
-    ["Hunter", "Cloth", { head: "huntercap", chest: "tunic", legs: "leggings", back: "quiver", off: "shortbow" }],
-    ["Ranger", "Leather", { head: "hood", chest: "jerkin", arms: "bracers", legs: "leggings", back: "quiver", off: "bow" }],
-    ["Warden", "Brigandine", { head: "falconhelm", shoulders: "leatherpads", chest: "brigandine", arms: "bracers", legs: "leggings", back: "wardencloak", off: "greatbow" }]] },
-  thief: { name: "Thief", role: "Infiltrator", shape: "/", body: { type: "m", hair: "hair" }, alt: { type: "f", hair: "ink" }, tiers: [
-    ["Footpad", "Rags", { head: "bandana", chest: "darktunic", legs: "wraps", main: "dagger" }],
-    ["Rogue", "Leather", { head: "cowl", chest: "garb", arms: "bracers", legs: "wraps", back: "scarf", main: "dagger", off: "dagger" }],
-    ["Shadow", "Lamellar", { head: "shadowmask", shoulders: "darkpads", chest: "lamellar", arms: "bracers", legs: "wraps", back: "longscarf", main: "dagger", off: "dagger" }]] },
-  cleric: { name: "Cleric", role: "Healer", shape: "A", body: { type: "f", hair: "hair" }, alt: { type: "m", hair: "hair" }, tiers: [
-    ["Acolyte", "Habit", { chest: "habit", arms: "woolsleeves", off: "tome" }],
-    ["Priest", "Vestment", { head: "veil", shoulders: "mantle", chest: "vestment", arms: "sleeves", main: "mace", off: "tome" }],
-    ["High Priest", "Regalia", { head: "mitre", shoulders: "mantle", chest: "gown", arms: "sleeves", main: "sceptre" }]] },
-  lancer: { name: "Lancer", role: "Dragoon", shape: "I", body: { type: "m", hair: "hairB" }, alt: { type: "f", hair: "hairB" }, tiers: [
-    ["Militia", "Padded", { head: "kettle", chest: "gambeson", legs: "trousers", main: "spear" }],
-    ["Dragoon", "Chain", { head: "winghelm", shoulders: "spaulders", chest: "chain", arms: "gauntlets", legs: "greaves", back: "cloak", main: "spear" }],
-    ["Dragon Knight", "Scale", { head: "winghelm", shoulders: "spaulders", chest: "scaleplate", arms: "gauntlets", legs: "greaves", back: "dragoncape", main: "dragonspear" }]] },
-};
-for (const k of Object.values(CLASSES)) k.loadout = k.tiers[2][2];
-// weapon variants shown on the stance and attack sheets
-const KNIGHT_GS = { ...CLASSES.knight.loadout, main: "greatsword", off: undefined };
-const LANCER_PH = { ...CLASSES.lancer.loadout, main: "shortspear", off: "shield" };
-// enchanted pilot loadouts: [key, name, loadout, body] — each wears one item with a live gear effect
-const ENCHANTED = [
-  ["flame-sword", "Flame sword", { ...CLASSES.knight.loadout, main: "flamesword" }, CLASSES.knight.body],
-  ["frost-staff", "Frost staff", { ...CLASSES.mage.loadout, main: "froststaff" }, CLASSES.mage.body],
-  ["storm-spear", "Storm spear", { ...CLASSES.lancer.loadout, main: "stormspear" }, CLASSES.lancer.body],
-  ["shadow-daggers", "Shadow daggers", { ...CLASSES.thief.loadout, main: "shadowdagger", off: "shadowdagger" }, CLASSES.thief.body],
-  ["holy-vestments", "Holy vestments", { ...CLASSES.cleric.tiers[1][2], chest: "holyvestments" }, CLASSES.cleric.body],
-];
-const bodyOf = (k, type) => (k.body.type === type ? k.body : k.alt);
-
 function layerImg(slot, id, view, bob, body, stance = "guard", pose = 0) {
   const lay = new Layer(), K = rig(view, bob, body, stance, pose);
   if (slot === "base") drawBase(lay, K, body);
@@ -1205,7 +1164,6 @@ function recolor(img, scheme) {
   o.c = img.c.map((v) => (v && v.r && m[v.r] ? { hex: SCHEME_RAMPS[m[v.r]][v.i], ...(v.a !== undefined ? { a: v.a } : {}) } : v));
   return o;
 }
-function makeSprite(key, view, bob = 0) { const k = CLASSES[key]; return dress(k.loadout, view, bob, k.body); }
 
 // ---------- four facings ----------
 // A unit stands on a tile and faces one of the four grid directions. On screen these are the iso diagonals.
@@ -1561,4 +1519,4 @@ function frame(style) {
 }
 
 setStyle("muted");
-export { TEAM_SCHEMES, SCHEME_RAMPS, recolor, ENCHANTED, FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
+export { TEAM_SCHEMES, SCHEME_RAMPS, recolor, FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, L, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };

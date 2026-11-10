@@ -10,30 +10,31 @@ mkdirSync(OUT, { recursive: true });
 
 import * as core from "../docs/lib/pixelrpg.js";
 import { terrain, height, PROPS as MAP_PROPS } from "../docs/lib/battle.js";
-const { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, R, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile, setCell, setPNGWriter, setStyle, STYLE, FACINGS, drawUnit, ENCHANTED } = core;
+import { LOOKS, KNIGHT_GS, LANCER_PH, ENCHANTED, bodyOf } from "../docs/lib/presets.js";
+const { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, L, Layer, MARK, MD, ORDER, OY0, P, POSES, R, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile, setCell, setPNGWriter, setStyle, STYLE, FACINGS, drawUnit } = core;
 setStyle(process.env.STYLE === "classic" ? "classic" : "muted"); // STYLE=classic npm run art for the original look
 setPNGWriter((file, w, h, rgba) => writeFileSync(`${OUT}/${file}`, encodePNG(w, h, rgba)));
 
 
 // unit sheets (default body, top tier): [front idle 0, front idle 1, back idle 0, back idle 1]
 const roster = {};
-for (const key of Object.keys(CLASSES)) {
+for (const key of Object.keys(LOOKS)) {
   // frames: SE idle 0-1, NW idle 0-1 (as before), then SW idle 0-1 and NE idle 0-1 (mirrors)
-  const k = CLASSES[key], frames = ["SE", "NW", "SW", "NE"].flatMap((f) => [0, 1].map((b) => drawUnit(k.loadout, f, b, k.body)));
+  const k = LOOKS[key], frames = ["SE", "NW", "SW", "NE"].flatMap((f) => [0, 1].map((b) => drawUnit(k.loadout, f, b, k.body)));
   const sheet = new Img(CW * 8, CH);
   frames.forEach((f, i) => sheet.blit(f, i * CW, 0));
   sheet.png(`unit-${key}.png`);
   roster[key] = frames;
 }
 {
-  const keys = Object.keys(CLASSES), s = new Img(keys.length * CW, CH);
+  const keys = Object.keys(LOOKS), s = new Img(keys.length * CW, CH);
   keys.forEach((k, i) => s.blit(solid(roster[k][0], "#ead6b0"), i * CW, 0));
   s.png("silhouettes.png");
 }
 // tiers grid: one row per class, columns T1 T2 T3 (male) then T1 T2 T3 (female); plus the same as silhouettes
 {
-  const keys = Object.keys(CLASSES), s = new Img(6 * CW, keys.length * CH), si = new Img(6 * CW, keys.length * CH);
-  keys.forEach((key, r) => { const k = CLASSES[key]; ["m", "f"].forEach((t, bi) => k.tiers.forEach(([, , lo], ti) => {
+  const keys = Object.keys(LOOKS), s = new Img(6 * CW, keys.length * CH), si = new Img(6 * CW, keys.length * CH);
+  keys.forEach((key, r) => { const k = LOOKS[key]; ["m", "f"].forEach((t, bi) => k.tiers.forEach(([, , lo], ti) => {
     const img = dress(lo, "front", 0, bodyOf(k, t)); s.blit(img, (bi * 3 + ti) * CW, r * CH); si.blit(solid(img, "#ead6b0"), (bi * 3 + ti) * CW, r * CH);
   })); });
   s.png("tiers.png"); si.png("tiers-sil.png");
@@ -61,16 +62,16 @@ for (const [tag, body] of [["m", { type: "m", hair: "hair" }], ["f", { type: "f"
 // build-up strips and an exploded layer row
 const STEPS = [["base", "limbs"], ["legs"], ["chest"], ["arms", "shoulders"], ["head"], ["back", "off", "main"]];
 for (const key of ["knight", "mage"]) {
-  const k = CLASSES[key], s = new Img(STEPS.length * CW, CH); let acc = [];
+  const k = LOOKS[key], s = new Img(STEPS.length * CW, CH); let acc = [];
   STEPS.forEach((st, i) => { acc = acc.concat(st); s.blit(dress(k.loadout, "front", 0, k.body, acc), i * CW, 0); });
   s.png(`build-${key}.png`);
 }
 {
-  const k = CLASSES.knight, slots = ORDER.front.filter((s) => s !== "hair"), s = new Img(slots.length * CW, CH);
+  const k = LOOKS.knight, slots = ORDER.front.filter((s) => s !== "hair"), s = new Img(slots.length * CW, CH);
   slots.forEach((slot, i) => { const id = BODYSLOT(slot) ? slot : k.loadout[slot]; const l = id && layerImg(slot, id, "front", 0, k.body, stanceOf(k.loadout)); if (l) s.blit(l, i * CW, 0); });
   s.png("layers-knight.png");
 }
-writeFileSync(`${OUT}/gear.json`, JSON.stringify({ CW, CH, ACOLS, order: ORDER, slots: SLOTS, gear: gearInfo, classes: Object.fromEntries(Object.entries(CLASSES).map(([k, v]) => [k, { name: v.name, shape: v.shape, body: v.body.type, tiers: v.tiers }])) }, null, 1));
+writeFileSync(`${OUT}/gear.json`, JSON.stringify({ CW, CH, ACOLS, order: ORDER, slots: SLOTS, gear: gearInfo, classes: Object.fromEntries(Object.entries(LOOKS).map(([k, v]) => [k, { name: v.name, shape: v.shape, body: v.body.type, tiers: v.tiers }])) }, null, 1));
 
 
 // tile swatch sheet: each terrain at h=1 and h=2
@@ -117,7 +118,7 @@ function battle(file, { marks = true } = {}) {
     img.blit(tile(ter(i, j), h + 1, i * 13 + j * 7, m), sx, sy - STEP);
     if (marks && key === "3,7") cursor(img, sx, sy - STEP);
     if (props[key]) img.blit(prop(props[key]), sx + HW - 20, sy - STEP + HH - 48);
-    if (units[key]) { const [u, f] = units[key], k = CLASSES[u]; img.blit(drawUnit(k.loadout, f, 0, k.body), sx + HW - FX, sy - STEP + HH - FY + 1); }
+    if (units[key]) { const [u, f] = units[key], k = LOOKS[u]; img.blit(drawUnit(k.loadout, f, 0, k.body), sx + HW - FX, sy - STEP + HH - FY + 1); }
   }
   // enemy slime marker spot left empty for the live pixelfx critter
   img.png(file);
@@ -143,14 +144,14 @@ console.log("ok", mapInfo);
 
 // roster lineup: every class, front then back
 {
-  const keys = Object.keys(CLASSES), s = new Img(keys.length * CW, CH * 2);
+  const keys = Object.keys(LOOKS), s = new Img(keys.length * CW, CH * 2);
   keys.forEach((k, i) => { s.blit(roster[k][0], i * CW, 0); s.blit(roster[k][2], i * CW, CH); });
   s.png("roster.png");
 }
 
 // stance sheet: each stance on an iso tile, SE front row and NW back row
 {
-  const C = CLASSES, picks = [["guard", C.knight.loadout, C.knight.body], ["caster", C.mage.loadout, C.mage.body], ["archer", C.archer.loadout, C.archer.body], ["rogue", C.thief.loadout, C.thief.body], ["lancer", C.lancer.loadout, C.lancer.body], ["greatsword", KNIGHT_GS, C.knight.body], ["phalanx", LANCER_PH, C.lancer.body]];
+  const C = LOOKS, picks = [["guard", C.knight.loadout, C.knight.body], ["caster", C.mage.loadout, C.mage.body], ["archer", C.archer.loadout, C.archer.body], ["rogue", C.thief.loadout, C.thief.body], ["lancer", C.lancer.loadout, C.lancer.body], ["greatsword", KNIGHT_GS, C.knight.body], ["phalanx", LANCER_PH, C.lancer.body]];
   const SH = 100, s = new Img(picks.length * CW, 2 * SH);
   picks.forEach(([st, lo, bd], i) => ["front", "back"].forEach((v, r) => {
     const k = { loadout: lo, body: bd };
@@ -164,7 +165,7 @@ console.log("ok", mapInfo);
 {
   setCell(96, 24); const LW = 96;
   // rows: the six classes, then the knight with a greatsword and the lancer with spear and shield
-  const rows = Object.values(CLASSES).map((k) => [k.loadout, k.body]).concat([[KNIGHT_GS, CLASSES.knight.body], [LANCER_PH, CLASSES.lancer.body]]);
+  const rows = Object.values(LOOKS).map((k) => [k.loadout, k.body]).concat([[KNIGHT_GS, LOOKS.knight.body], [LANCER_PH, LOOKS.lancer.body]]);
   // per row: SE poses 0-3, NW poses 0-3, SW poses 0-3, NE poses 0-3
   const s2 = new Img(16 * LW, rows.length * CH);
   rows.forEach(([lo, bd], r) => ["SE", "NW", "SW", "NE"].forEach((f, fi) => [0, 1, 2, 3].forEach((p) => s2.blit(drawUnit(lo, f, 0, bd, stanceOf(lo), p), (fi * 4 + p) * LW, r * CH))));
@@ -174,8 +175,8 @@ console.log("ok", mapInfo);
 {
   const pairs = [{ main: "dagger", off: "dagger" }, { main: "sword", off: "offsword" }, { main: "mace", off: "offmace" }];
   const bodyM = { type: "m", hair: "hair" }, s3 = new Img(pairs.length * 4 * 96, CH);
-  const looks = [CLASSES.thief.loadout, CLASSES.knight.tiers[1][2], CLASSES.cleric.tiers[1][2]];
-  pairs.forEach((pr, i) => [0, 1, 2, 3].forEach((p) => { const lo = { ...looks[i], ...pr, back: looks[i].back }; s3.blit(dress(lo, "front", 0, i === 2 ? CLASSES.cleric.body : bodyM, null, "rogue", p), (i * 4 + p) * 96, 0); }));
+  const looks = [LOOKS.thief.loadout, LOOKS.knight.tiers[1][2], LOOKS.cleric.tiers[1][2]];
+  pairs.forEach((pr, i) => [0, 1, 2, 3].forEach((p) => { const lo = { ...looks[i], ...pr, back: looks[i].back }; s3.blit(dress(lo, "front", 0, i === 2 ? LOOKS.cleric.body : bodyM, null, "rogue", p), (i * 4 + p) * 96, 0); }));
   s3.png("dual.png");
   setCell(CW, 0);
 }
@@ -243,7 +244,7 @@ console.log("ok", mapInfo);
     writeFileSync(`${OUT}/combat-${name}.png`, cv.png());
     meta[name] = { w: W, h: H, frames: seq.length, fps: FPS, hitFrame: hitF + 0, freeze, effect: melee?.id ?? proj.id, impact: melee?.impact?.id ?? proj?.impact?.id ?? null };
   }
-  const C = CLASSES;
+  const C = LOOKS;
   await clip("knight-slash", { lo: C.knight.loadout, body: C.knight.body, W: 208, H: 120, ux: 60, uy: 100, tx: 128, ty: 108, melee: { id: "melee/sword-slash", opts: { radius: 50, angle: 0.25 }, dx: 12, dy: -6 } });
   await clip("knight-greatsword", { lo: KNIGHT_GS, body: C.knight.body, W: 208, H: 120, ux: 60, uy: 100, tx: 128, ty: 108, melee: { id: "melee/heavy-cleave", opts: { angle: 0.2 }, dx: 2, dy: -6 } });
   await clip("thief-riposte", { lo: C.thief.loadout, body: C.thief.body, W: 208, H: 120, ux: 52, uy: 100, tx: 128, ty: 108, melee: { id: "melee/thrust", opts: { reach: 58, angle: -0.12, palette: ["#120a1e", "#24123a", "#3a1c5c", "#5a2c86", "#a970e0", "#d2b0f4", "#ffffff"] }, dx: 2, dy: -16 } });
@@ -258,9 +259,9 @@ console.log("ok", mapInfo);
 
 // facings sheet: every class (default body, top tier) in the four facings, clockwise from NE, each on an iso tile
 {
-  const keys = Object.keys(CLASSES), SH = 100, s = new Img(FACINGS.length * CW, keys.length * SH);
+  const keys = Object.keys(LOOKS), SH = 100, s = new Img(FACINGS.length * CW, keys.length * SH);
   keys.forEach((key, r) => FACINGS.forEach((f, i) => {
-    const k = CLASSES[key];
+    const k = LOOKS[key];
     s.blit(tile("grass", 1, r * 4 + i), i * CW + 24 - HW, r * SH + FY - HH);
     s.blit(drawUnit(k.loadout, f, 0, k.body), i * CW, r * SH);
   }));
@@ -304,10 +305,10 @@ console.log("ok", mapInfo);
 // team colours: row 0 the player side (top tier, default body); rows 1-4 the enemy side (middle tier, other body)
 // with no scheme, then each team scheme. SE idle, 48 x 76 per cell, one column per class.
 {
-  const keys = Object.keys(CLASSES), rows = [["player", null], ["enemy", null], ...Object.keys(core.TEAM_SCHEMES).map((s) => ["enemy", s])];
+  const keys = Object.keys(LOOKS), rows = [["player", null], ["enemy", null], ...Object.keys(core.TEAM_SCHEMES).map((s) => ["enemy", s])];
   const s = new Img(keys.length * CW, rows.length * CH);
   rows.forEach(([side, scheme], r) => keys.forEach((key, i) => {
-    const k = CLASSES[key], lo = side === "player" ? k.loadout : k.tiers[1][2], body = side === "player" ? k.body : { ...k.alt, scheme };
+    const k = LOOKS[key], lo = side === "player" ? k.loadout : k.tiers[1][2], body = side === "player" ? k.body : { ...k.alt, scheme };
     s.blit(drawUnit(lo, "SE", 0, body), i * CW, r * CH);
   }));
   s.png("teams.png");

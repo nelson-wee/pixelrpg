@@ -292,7 +292,7 @@ async function attackAnim(u, t) {
   for (const [i, ms] of ATTACK_MS.slice(0, 2).entries()) { v.pose = i; await wait(ms); }
   v.pose = 2;
   if (B.RANGED(u)) {
-    const flight = fly(u, t, u.cls === "archer" ? "arrow" : "spell");
+    const flight = fly(u, t, u.projectile ?? "spell");
     await wait(ATTACK_MS[2]); v.pose = 3;
     await flight; impact(); await wait(320);
   } else {
