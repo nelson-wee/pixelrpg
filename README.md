@@ -18,7 +18,7 @@ The tools need Node 18 or newer. They use no packages.
 
 ## Web viewer (GitHub Pages)
 
-`docs/` is a static site: the Wardrobe. It draws units live in the browser with the same sprite code that makes the sheets. You can select class tiers, any gear piece, the male or female body, the hair colour and the SE or NW facing, and switch between the idle and the attack animation.
+`docs/` is a static site with two pages. The Wardrobe (`index.html`) draws units live in the browser with the same sprite code that makes the sheets. You can select class tiers, any gear piece, the male or female body, the hair colour and the facing, and switch between the idle and the attack animation. The battle demo (`battle.html`) is described below.
 
 To play live gear effects, the viewer needs the pixelfx source in `docs/pixelfx` (git-ignored). `npm run site` copies it there, and the Pages workflow runs the same step before it uploads the site.
 
@@ -28,6 +28,29 @@ To publish it, open the repository's **Settings → Pages**. Set **Source** to "
 npm run site
 python3 -m http.server --directory docs 8000
 ```
+
+## Battle demo
+
+`docs/battle.html` is a small playable battle on the demo map: six player units against six enemy units. The enemies use the same six classes as the player, with the middle gear tier and the other body type. There are no monsters.
+
+- **Stats:** each unit has health and attack only. Move and range come from the class.
+- **Facing:** damage = attack × side. An attack from the front does ×1, from the side ×1.25 and from the back ×1.5. The side comes from `attackSide` and the defender's facing. A unit turns to its target when it attacks and faces its last step when it moves. A unit that is hit does not turn. At the end of each action, the player selects the unit's facing; the map shows its front, side and back tiles.
+- **Turns:** a player phase, then an enemy phase. In a phase, each unit can move once and attack once.
+- **Map:** water and props block movement, and one step can go up or down 2 height levels at most.
+- **Controls:** every step has a button, so the game plays on a phone. Select a unit (or use Next unit), then a command: Move, Attack, Wait, or Cancel / Undo move. Move shows a direction pad for the cursor and a Move here button. Attack selects the best target first; Previous and Next change the target, and the preview shows the damage before you attack. At the end, a direction pad selects the facing (NW, NE, SW, SE), then Done. Taps on the map, a mouse and the keyboard (arrow keys, Enter, Escape) are shortcuts for the same steps.
+- **Team colours:** the enemy side wears a team colour scheme, so the two sides read apart. Select it on the page: Crimson (the default), Ebony, Verdant, or the gear's own colours.
+- **Enemy AI:** it tries every tile it can reach and takes the attack that does the most damage. A kill counts most, so it looks for side and back attacks. With no target in reach, it walks toward the nearest foe. At the end, it faces the nearest foe.
+
+| Class | Health | Attack | Move | Range |
+|---|---|---|---|---|
+| Knight | 42 | 10 | 3 | 1 |
+| Lancer | 36 | 11 | 4 | 1–2, straight line |
+| Thief | 28 | 9 | 5 | 1 |
+| Archer | 26 | 9 | 4 | 2–4 |
+| Mage | 22 | 12 | 3 | 2–3 |
+| Cleric | 30 | 7 | 3 | 1 |
+
+The rules are in `docs/lib/battle.js`, with no DOM. `npm test` runs `tools/battle-test.mjs`, which checks the facing math and the movement rules and plays a full battle with the AI on both sides. The map data is shared with `tools/art.mjs`, so `battle-map.png` shows the same ground.
 
 ## Make the sprites again
 
@@ -52,6 +75,9 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | `docs/lib/pixelrpg.js` | The sprite core: palette, skeleton, gear, stances, attacks, tiles, props, icons, UI frames. Pure JavaScript, used by both the generator and the web viewer |
 | `tools/art.mjs` | The generator: writes every sheet in `sprites/art`, the battle map and the combat clips |
 | `docs/index.html`, `docs/app.js` | The web viewer (Wardrobe) |
+| `docs/lib/battle.js` | The battle rules: demo map, class stats, movement, facing damage, turns, enemy AI. No DOM |
+| `docs/battle.html`, `docs/battle.js` | The battle demo page |
+| `tools/battle-test.mjs` | Tests for the battle rules (`npm test`) |
 | `tools/fx.mjs` | Renders the chosen pixelfx effects as one-row strips at 15 fps, recoloured with the system ramps |
 | `tools/zoom.mjs` | Nearest-neighbour preview of a PNG |
 | `sprites/art/` | Generated sheets and atlases, plus `gear.json` (atlas cells, shoulder and hem widths) and `art.json` |
@@ -70,6 +96,7 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 - **Dual wield:** after European sword and dagger (Bolognese and rapier-and-dagger fencing). In guard, the off-hand blade leads, held forward with its point up as a parry tool, and the main blade waits low at the hip with its point raised. The attack is a parry and riposte in one tempo: the main blade chambers at the hip, then the unit lunges 6 px as the off-hand blade sweeps high to deflect and the main arm thrusts fully, then recovers to guard.
 - **Stances:** the equipped weapon selects the stance: guard, caster, archer, dual wield, lancer, greatsword, or spear and shield. Units face SE (front) or NW (back), with the feet on the tile diagonal.
 - **Facings:** a unit faces one of 4 grid directions: NE, SE, SW or NW, which are the screen diagonals. SE (front) and NW (back) are drawn. SW mirrors SE and NE mirrors NW, so handedness flips in the mirrored facings. One grid step per facing (`[dcol, drow]`): SE `[1, 0]`, SW `[0, 1]`, NW `[-1, 0]`, NE `[0, -1]`. The core gives `drawUnit(loadout, facing, bob, body, stance, pose)`, `turn(facing, ±1)`, `facingToward(fromTile, toTile)` and `attackSide(defenderTile, defenderFacing, attackerTile)`, which returns `"front"`, `"side"` or `"back"` for facing rules in combat. Diagonal tiles count as front or back.
+- **Team colours:** a scheme in `TEAM_SCHEMES` swaps the dyed ramps of the gear layers (cloth, trim and metal) to a team palette: **Crimson** (blood red and charcoal, blackened steel), **Ebony** (charcoal and ash, blackened steel) and **Verdant** (moss green and bone, bronze). Leather, skin and hair keep their colours. Set it as `body.scheme` in `dress()` or `drawUnit()`, or call `recolor(img, scheme)` on one layer.
 - **Gear with live effects:** a gear piece can carry an `fx` entry: a pixelfx effect that plays while the piece is equipped. pixelfx body effects read a character mask, so `docs/lib/gearfx.js` gives them our own mask each frame. With `target: "self"` the mask is the piece's own pixels (a burning blade); with `target: "body"` it is the whole unit (an aura from worn gear). The effect runs on its own clock and draws a back layer behind the unit and a front layer over it, in every pose and facing. The pilot items: **flame sword** (`status/burning`), **frost staff** (`status/frozen`), **storm spear** (`lightning/electrified`, two-handed), **shadow daggers** (`status/burning` with a violet-black ramp) and **holy vestments** (`holy/blessing` over the whole body).
 - **Two-handed weapons:** the greatsword, the spear and the dragon lance use both hands, so the off-hand layer is not drawn. The short spear is one-handed and goes with a shield. It uses the guard ready pose and has its own thrust attack.
 - **Attacks:** 4 frames (ready 560 ms, wind-up 320 ms, strike 200 ms, follow-through 350 ms) in a 96 × 76 px cell, with the feet at (48, 72).
@@ -81,6 +108,7 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | File | Layout |
 |---|---|
 | `unit-<class>.png` | 8 frames of 48 × 76: SE idle ×2, NW idle ×2, SW idle ×2, NE idle ×2 |
+| `teams.png` | 5 rows × 6 classes, SE idle, 48 × 76: the player side, then the enemy side (middle tier, other body) with no scheme, Crimson, Ebony and Verdant |
 | `facings.png` | 6 rows (classes) × 4 columns (NE, SE, SW, NW), each unit on an iso tile, 48 × 100 per cell |
 | `tiers.png` | 6 rows (classes) × 6 columns (T1–T3 male, T1–T3 female) |
 | `attacks.png` | 8 rows × 16 frames of 96 × 76: 4 poses each for SE, NW, SW, then NE. Rows: the 6 classes, then the knight with a greatsword, then the lancer with spear and shield |
