@@ -33,24 +33,25 @@ python3 -m http.server --directory docs 8000
 
 `docs/battle.html` is a small playable battle on the demo map: six player units against six enemy units. The enemies use the same six classes as the player, with the middle gear tier and the other body type. There are no monsters.
 
-- **Stats:** each unit has health and attack only. Move and range come from the class.
+- **Stats:** each unit has health and attack. Casters also have MP. Move and range come from the class.
+- **Skills:** a second kind of action. A skill uses MP and takes the unit's action for the turn, like an attack. MP does not come back during the battle. **Heal** (cleric, 6 MP, range 0–3) gives one ally up to 14 HP, and the caster can heal itself. **Fireball** (mage, 8 MP, range 2–4) hits the target tile and its 4 grid neighbours (no diagonals) for 10 damage × side, seen from the caster's tile. It also hits the caster's own units. The preview lists every unit that the skill touches. The effects come from pixelfx (`holy/heal` on the target's own sprite mask, `explosions/plasma-explosion` in the fire ramp) and load from `docs/pixelfx`. Without those files, simple pixel sparks stand in. Skills are data in `SKILLS` in `docs/lib/battle.js`.
 - **Facing:** damage = attack × side. An attack from the front does ×1, from the side ×1.25 and from the back ×1.5. The side comes from `attackSide` and the defender's facing. A unit turns to its target when it attacks and faces its last step when it moves. A unit that is hit does not turn. At the end of each action, the player selects the unit's facing; the map shows its front, side and back tiles.
-- **Turns:** a player phase, then an enemy phase. In a phase, each unit can move once and attack once.
+- **Turns:** a player phase, then an enemy phase. In a phase, each unit can move once and act once (attack or skill).
 - **Map:** water and props block movement, and one step can go up or down 2 height levels at most.
-- **Controls:** every step has a button, so the game plays on a phone. Select a unit (or use Next unit), then a command: Move, Attack, Wait, or Cancel / Undo move. Move shows a direction pad for the cursor and a Move here button. Attack selects the best target first; Previous and Next change the target, and the preview shows the damage before you attack. At the end, a direction pad selects the facing (NW, NE, SW, SE), then Done. Taps on the map, a mouse and the keyboard (arrow keys, Enter, Escape) are shortcuts for the same steps.
+- **Controls:** every step has a button, so the game plays on a phone. Select a unit (or use Next unit), then a command: Move, Attack, Skills, Wait, or Cancel / Undo move. Skills opens a list with the MP cost of each skill. Heal selects the most hurt ally first (Previous and Next change it). Fireball aims at the best tile first; the direction pad, Previous foe and Next foe move the aim, and orange tiles show the area. Move shows a direction pad for the cursor and a Move here button. Attack selects the best target first; Previous and Next change the target, and the preview shows the damage before you attack. At the end, a direction pad selects the facing (NW, NE, SW, SE), then Done. Taps on the map, a mouse and the keyboard (arrow keys, Enter, Escape) are shortcuts for the same steps.
 - **Team colours:** the enemy side wears a team colour scheme, so the two sides read apart. Select it on the page: Crimson (the default), Ebony, Verdant, or the gear's own colours.
-- **Enemy AI:** it tries every tile it can reach and takes the attack that does the most damage. A kill counts most, so it looks for side and back attacks. With no target in reach, it walks toward the nearest foe. At the end, it faces the nearest foe.
+- **Enemy AI:** it tries every tile it can reach and takes the attack or skill with the best score. Damage and kills count for an attack. A heal counts the health it restores when an ally lost 6 or more. A fireball counts the damage to foes and pays double for damage to its own side. A kill counts most, so it looks for side and back attacks. With no target in reach, it walks toward the nearest foe. At the end, it faces the nearest foe.
 
-| Class | Health | Attack | Move | Range |
-|---|---|---|---|---|
-| Knight | 42 | 10 | 3 | 1 |
-| Lancer | 36 | 11 | 4 | 1–2, straight line |
-| Thief | 28 | 9 | 5 | 1 |
-| Archer | 26 | 9 | 4 | 2–4 |
-| Mage | 22 | 12 | 3 | 2–3 |
-| Cleric | 30 | 7 | 3 | 1 |
+| Class | Health | MP | Attack | Move | Range | Skills |
+|---|---|---|---|---|---|---|
+| Knight | 42 | – | 10 | 3 | 1 | – |
+| Lancer | 36 | – | 11 | 4 | 1–2, straight line | – |
+| Thief | 28 | – | 9 | 5 | 1 | – |
+| Archer | 26 | – | 9 | 4 | 2–4 | – |
+| Mage | 22 | 20 | 12 | 3 | 2–3 | Fireball |
+| Cleric | 30 | 18 | 7 | 3 | 1 | Heal |
 
-The rules are in `docs/lib/battle.js`, with no DOM. `npm test` runs `tools/battle-test.mjs`, which checks the facing math and the movement rules and plays a full battle with the AI on both sides. The map data is shared with `tools/art.mjs`, so `battle-map.png` shows the same ground.
+The rules are in `docs/lib/battle.js`, with no DOM. `npm test` runs `tools/battle-test.mjs`, which checks the facing math, the movement rules and the skills (MP cost, heal limit, plus-shaped area, friendly fire), and plays a full battle with the AI on both sides. The map data is shared with `tools/art.mjs`, so `battle-map.png` shows the same ground.
 
 ## Make the sprites again
 
@@ -75,7 +76,7 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | `docs/lib/pixelrpg.js` | The sprite core: palette, skeleton, gear, stances, attacks, tiles, props, icons, UI frames. Pure JavaScript, used by both the generator and the web viewer |
 | `tools/art.mjs` | The generator: writes every sheet in `sprites/art`, the battle map and the combat clips |
 | `docs/index.html`, `docs/app.js` | The web viewer (Wardrobe) |
-| `docs/lib/battle.js` | The battle rules: demo map, class stats, movement, facing damage, turns, enemy AI. No DOM |
+| `docs/lib/battle.js` | The battle rules: demo map, class stats, skills and MP, movement, facing damage, turns, enemy AI. No DOM |
 | `docs/battle.html`, `docs/battle.js` | The battle demo page |
 | `tools/battle-test.mjs` | Tests for the battle rules (`npm test`) |
 | `tools/fx.mjs` | Renders the chosen pixelfx effects as one-row strips at 15 fps, recoloured with the system ramps |
