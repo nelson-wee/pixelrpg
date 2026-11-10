@@ -54,10 +54,12 @@ export const DEMO_FOES = [
 ];
 // where each character starts: { character, team, tile, facing? }
 const PARTY_TILES = [[4, 7], [2, 7], [6, 7], [1, 8], [3, 9], [5, 8]], FOE_TILES = [[5, 3], [7, 3], [8, 2], [1, 2], [2, 1], [5, 1]];
-export const DEMO_ROSTER = [
-  ...DEMO_PARTY.map((character, i) => ({ character, team: "player", tile: PARTY_TILES[i] })),
+/** The demo battle with a party of six (by default the demo party) against the demo foes. */
+export const demoRoster = (party = DEMO_PARTY) => [
+  ...party.map((character, i) => ({ character, team: "player", tile: PARTY_TILES[i] })),
   ...DEMO_FOES.map((character, i) => ({ character, team: "enemy", tile: FOE_TILES[i] })),
 ];
+export const DEMO_ROSTER = demoRoster();
 export const START_FACING = { player: "NE", enemy: "SW" };
 
 /** A unit from a placed character. The character may be a definition or a made character. */

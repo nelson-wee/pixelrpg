@@ -50,6 +50,7 @@ canvas:focus-visible { outline: 3px solid var(--gold); outline-offset: -3px; }
 .chip:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .chip:disabled { opacity: 0.45; cursor: default; }
 .chip.main { background: var(--gold); color: var(--ink); box-shadow: inset -2px -2px 0 #8a5a1e, inset 2px 2px 0 #fff2b0; }
+.chip[aria-pressed="true"]:hover:not(:disabled), .chip.main:hover:not(:disabled) { background: #f6d777; }
 .chip[aria-pressed="true"] { background: var(--gold); color: var(--ink); box-shadow: inset -2px -2px 0 #8a5a1e, inset 2px 2px 0 #fff2b0; }
 .unit { display: flex; gap: 14px; align-items: center; min-height: 120px; }
 .unit canvas { background: #2a1f2d; flex: 0 0 auto; }
@@ -73,6 +74,27 @@ ol.log li:first-child { color: var(--strong); }
 .pad .chip { padding: 4px 6px; min-height: 48px; }
 .pad .d-NW { grid-area: 1 / 1; } .pad .d-NE { grid-area: 1 / 3; } .pad .d-SW { grid-area: 3 / 1; } .pad .d-SE { grid-area: 3 / 3; } .pad .d-c { grid-area: 2 / 2; font-size: 14px; }
 .toggle { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 15px; }
+.muster { flex-direction: column; align-items: stretch; gap: 16px; }
+.mtitle { margin: 4px 0 0; font-family: 'Pixelify Sans', sans-serif; font-size: 28px; color: var(--strong); }
+.mroster { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.mcard { display: flex; gap: 10px; align-items: center; text-align: left; background: var(--panel); border: 2px solid var(--edge); padding: 8px; color: var(--text); font-family: 'Alegreya Sans', sans-serif; cursor: pointer; min-height: 44px; }
+.mcard:hover { border-color: #5a4a5e; }
+.mcard:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.mcard[aria-pressed="true"] { border-color: var(--gold); background: #2e2238; }
+.mcard canvas { width: 48px; height: 64px; background: #2a1f2d; flex: 0 0 auto; }
+.mcard .nm { font-family: 'Pixelify Sans', sans-serif; font-size: 18px; color: var(--strong); }
+.mcard .sub { font-family: 'Silkscreen', monospace; font-size: 10px; color: var(--dim); line-height: 1.5; }
+.mgrid { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.mprev { flex: 0 1 380px; min-width: 0; }
+.mgear { flex: 999 1 520px; min-width: 0; }
+.mstage { background: var(--stage); border: 2px solid var(--edge); display: flex; justify-content: center; }
+.mstage canvas { max-width: 100%; height: auto; }
+.toggles { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; }
+.mpresets { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px 18px; }
+.mpresets .row .cls { width: 56px; font-family: 'Pixelify Sans', sans-serif; font-size: 16px; color: var(--strong); }
+.mslot { display: flex; gap: 12px; align-items: flex-start; }
+.mslot .label { width: 92px; flex: 0 0 92px; padding-top: 14px; }
+@media (max-width: 640px) { .mslot { flex-direction: column; gap: 4px; } .mslot .label { padding-top: 0; } .mroster { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 footer { max-width: 1500px; margin: 0 auto; padding: 0 24px 40px; color: var(--dim); font-size: 14px; }
 @media (max-width: 640px) { header, main, footer { padding-left: 16px; padding-right: 16px; } .side { max-width: none; } }
 </style>
@@ -83,21 +105,55 @@ footer { max-width: 1500px; margin: 0 auto; padding: 0 24px 40px; color: var(--d
     <div class="eyebrow">PIXELRPG · <a href="./index.html">WARDROBE</a> · BATTLE DEMO</div>
     <h1>Battle at the river</h1>
   </div>
-  <p>Six classes against six. The enemies use the same classes, with other gear. Each unit has health and attack only, but facing counts: hit a unit from the side for ×1.25 damage, or from the back for ×1.5. At the end of each move, select where your unit faces.</p>
+  <p>Six characters against six. The enemies use the same archetypes, with other gear. Before each battle, change your party's gear. In battle, facing counts: hit a unit from the side for ×1.25 damage, or from the back for ×1.5.</p>
 </header>
-<main>
+<main id="musterView" class="muster" aria-label="Prepare your party">
+  <div class="bar">
+    <div>
+      <div class="label">BEFORE THE BATTLE</div>
+      <h2 class="mtitle">Prepare your party</h2>
+    </div>
+    <div class="row">
+      <button class="chip" type="button" id="musterReset">Reset party</button>
+      <button class="chip main" type="button" id="musterStart">Start battle →</button>
+    </div>
+  </div>
+  <div class="mroster" id="musterRoster" role="group" aria-label="Your party: select a character"></div>
+  <div class="mgrid">
+    <section class="card mprev" aria-label="Selected character">
+      <div class="label" id="musterLabel">CHARACTER</div>
+      <div class="mstage"><canvas id="musterCanvas" width="336" height="312" aria-label="The selected character, animated"></canvas></div>
+      <div class="toggles">
+        <span class="label">ANIMATION</span><div class="row" id="musterModes"></div>
+        <span class="label">BODY</span><div class="row" id="musterBody"></div>
+        <span class="label">HAIR</span><div class="row" id="musterHair"></div>
+        <span class="label">BEARD</span><div class="row" id="musterBeard"></div>
+      </div>
+      <div class="stats" id="musterStats"></div>
+      <div class="help" style="font-size: 14px">Gear sets the look and the stance (the weapon picks it). The archetype sets the stats and skills. Later, talents and gear will change the stats too.</div>
+    </section>
+    <section class="card mgear" aria-label="Gear">
+      <div class="label">LOOK PRESETS · GEAR ONLY, THE BODY STAYS</div>
+      <div id="musterPresets" class="mpresets"></div>
+      <div class="label" style="margin-top: 8px">GEAR BY SLOT</div>
+      <div id="musterSlots" style="display: flex; flex-direction: column; gap: 10px"></div>
+    </section>
+  </div>
+</main>
+<main id="battleView" hidden>
   <section class="board" aria-label="Battle map">
     <div class="bar">
       <div class="turn" id="turn" aria-live="polite"></div>
       <div class="row">
         <button class="chip" type="button" id="endTurn">End turn</button>
         <button class="chip" type="button" id="restart">Restart</button>
+        <button class="chip" type="button" id="loadout">Change gear</button>
       </div>
     </div>
     <div class="stage" id="stage">
       <canvas id="map" tabindex="0" aria-label="Battle map. Use the arrow keys to move the cursor along the grid, Enter to select, Escape to go back." aria-describedby="help"></canvas>
       <div class="banner" id="banner" aria-hidden="true"><span id="bannerText"></span></div>
-      <div class="over" id="over"><h2 id="overText">Victory</h2><button class="chip main" type="button" id="again">Play again</button></div>
+      <div class="over" id="over"><h2 id="overText">Victory</h2><div class="row"><button class="chip main" type="button" id="again">Play again</button><button class="chip" type="button" id="overGear">Change gear</button></div></div>
     </div>
     <div class="help" id="help" aria-live="polite"></div>
     <div id="actions" role="group" aria-label="Commands"></div>

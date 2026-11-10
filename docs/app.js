@@ -2,21 +2,9 @@
 import { TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0, FACINGS, FACING_VIEW, drawUnit, turn, attackSide } from "./lib/pixelrpg.js";
 import { GearFx, fxPieces, over, place } from "./lib/gearfx.js";
 import { LOOKS, KNIGHT_GS, LANCER_PH, ENCHANTED } from "./lib/presets.js";
-
-// short chip labels for every piece, by slot
-const SLOTS = [
-  ["head", "HEAD", [["greathelm", "Great helm"], ["coif", "Mail coif"], ["leathercap", "Leather cap"], ["winghelm", "Spire helm"], ["kettle", "Kettle hat"], ["wizhat", "Brim hat"], ["magehood", "Pointed hood"], ["cap", "Apprentice cap"], ["mitre", "Mitre"], ["veil", "Veil"], ["hood", "Hood"], ["huntercap", "Feather cap"], ["falconhelm", "Winged helm"], ["cowl", "Cowl"], ["bandana", "Bandana"], ["shadowmask", "Demon mask"]]],
-  ["shoulders", "SHOULDERS", [["pauldrons", "Pauldrons"], ["halfpauldrons", "Half pauldrons"], ["leatherpads", "Leather pads"], ["darkpads", "Lacquered pads"], ["spaulders", "Spaulders"], ["mantle", "Mantle"], ["collar", "Collar"]]],
-  ["chest", "CHEST", [["holyvestments", "Holy vestments (fx)"], ["plate", "Plate"], ["chainK", "Hauberk + cross"], ["chain", "Hauberk teal"], ["leatherarmor", "Studded leather"], ["scaleplate", "Dragon scale"], ["gambeson", "Gambeson"], ["robe", "Archmage robe"], ["simplerobe", "Adept robe"], ["shortrobe", "Short robe"], ["gown", "Gown"], ["vestment", "Vestment"], ["habit", "Habit"], ["brigandine", "Brigandine"], ["jerkin", "Jerkin"], ["tunic", "Tunic"], ["garb", "Garb"], ["lamellar", "Lamellar"], ["darktunic", "Patched tunic"]]],
-  ["arms", "ARMS", [["gauntlets", "Gauntlets"], ["mail", "Mail"], ["bracers", "Bracers"], ["bell", "Bell sleeves"], ["magesleeves", "Straight sleeves"], ["sleeves", "Long sleeves"], ["woolsleeves", "Wool sleeves"]]],
-  ["legs", "LEGS", [["greaves", "Greaves"], ["chausses", "Chausses"], ["leggings", "Leggings"], ["trousers", "Trousers"], ["wraps", "Wraps"]]],
-  ["back", "BACK", [["templecloak", "Trimmed cloak"], ["cape", "Cape"], ["dragoncape", "Dragon cape"], ["cloak", "Cloak"], ["wardencloak", "Warden cloak"], ["quiver", "Quiver"], ["scarf", "Scarf"], ["longscarf", "Long scarf"]]],
-  ["main", "MAIN HAND", [["flamesword", "Flame sword (fx)"], ["froststaff", "Frost staff (fx)"], ["stormspear", "Storm spear (2H, fx)"], ["shadowdagger", "Shadow dagger (fx)"], ["sword", "Sword"], ["greatsword", "Greatsword (2H)"], ["mace", "Mace"], ["dagger", "Dagger"], ["shortspear", "Short spear"], ["spear", "Spear (2H)"], ["dragonspear", "Dragon lance (2H)"], ["staff", "Staff"], ["rod", "Rod"], ["sceptre", "Sceptre"]]],
-  ["off", "OFF HAND", [["shadowdagger", "Shadow dagger (fx)"], ["shield", "Kite shield"], ["buckler", "Buckler"], ["dagger", "Dagger"], ["offsword", "Sword"], ["offmace", "Mace"], ["bow", "Longbow"], ["shortbow", "Short bow"], ["greatbow", "Greatbow"], ["tome", "Book"]]],
-];
+import { SLOTS, HAIRS, STANCE_NAMES } from "./lib/gearlist.js";
 const KEYS = SLOTS.map(([k]) => k);
-const HAIRS = [["hair", "Brown"], ["crimson", "Red"], ["hairB", "Blue-black"], ["ink", "Black"], ["grey", "Grey"]];
-const STANCE_NAMES = { guard: "GUARD", caster: "CASTER", archer: "ARCHER", rogue: "DUAL WIELD · SWORD & DAGGER", lancer: "LANCER (2H)", greatsword: "GREATSWORD (2H)", phalanx: "SPEAR & SHIELD" };
+
 // attack frame timing in ms: ready, wind-up, strike, follow-through
 const ATTACK_MS = [560, 320, 200, 350], IDLE_MS = [600, 600];
 
