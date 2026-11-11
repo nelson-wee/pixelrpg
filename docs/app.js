@@ -18,6 +18,20 @@ const HAIRS = [["hair", "Brown"], ["crimson", "Red"], ["hairB", "Blue-black"], [
 const STANCE_NAMES = { guard: "GUARD", caster: "CASTER", archer: "ARCHER", rogue: "DUAL WIELD · SWORD & DAGGER", lancer: "LANCER (2H)", greatsword: "GREATSWORD (2H)", phalanx: "SPEAR & SHIELD" };
 // attack frame timing in ms: ready, wind-up, strike, follow-through
 const ATTACK_MS = [560, 320, 200, 350], IDLE_MS = [600, 600];
+// every animation: its poses (numbers are attack poses, names are reactions) and how long each shows, in ms.
+// Idle uses the 48 px cell and bobs; the others use the wide 96 px cell.
+const ANIMS = {
+  idle: { label: "Idle", poses: [0, 1], ms: IDLE_MS, cap: "IDLE · 2 FRAMES" },
+  attack: { label: "Attack", poses: [0, 1, 2, 3], ms: ATTACK_MS, cap: "ATTACK · 4 FRAMES" },
+  hurt: { label: "Hurt", poses: [0, "hurt:0", "hurt:1"], ms: [800, 170, 230], cap: "FLINCH · 2 FRAMES" },
+  block: { label: "Block", poses: [0, "block:0", "block:1", "block:0"], ms: [700, 280, 150, 420], cap: "BLOCK · 2 FRAMES" },
+};
+// status effects to preview on the unit: our own pixelfx effects in docs/fx. The bulwark's shield stands on the
+// unit's front: to the right in the front view, to the left and behind the body in the back view.
+const WARDS = { none: "None", arcane: "Arcane ward", bulwark: "Bulwark" };
+const wardPiece = (ward, view) => ward === "none" ? [] : [{ slot: "ward", id: `${ward}-${view}`, spec: {
+  id: ward === "arcane" ? "ward/arcane-ward" : "ward/bulwark", target: "body", element: ward === "arcane" ? "arcane ward" : "bulwark",
+  opts: ward === "bulwark" && view === "back" ? { behind: true, dir: -1 } : {} } }];
 
 // presets: every class's three tiers, plus the two weapon variants
 const PRESETS = Object.entries(CLASSES).map(([key, k]) => {
@@ -30,7 +44,7 @@ const PRESETS = Object.entries(CLASSES).map(([key, k]) => {
 // enchanted pilot items: each loadout wears one piece that carries a live pixelfx effect
 PRESETS.push({ cls: "Enchanted", tiers: ENCHANTED.map(([key, name, lo, body]) => ({ name, label: `Enchanted · ${name}`, lo, look: { body: body.type, hair: body.hair, beard: false } })) });
 
-const state = { lo: { ...CLASSES.knight.loadout }, body: "m", hair: "hair", beard: false, facing: "SE", mode: "idle", style: STYLE.name, fx: true };
+const state = { lo: { ...CLASSES.knight.loadout }, body: "m", hair: "hair", beard: false, facing: "SE", mode: "idle", style: STYLE.name, fx: true, ward: "none" };
 const clean = (lo) => Object.fromEntries(KEYS.filter((k) => lo[k]).map((k) => [k, lo[k]]));
 const same = (a, b) => KEYS.every((k) => (a[k] || null) === (b[k] || null));
 
@@ -55,11 +69,11 @@ function toCanvas(img) {
 }
 const cache = new Map();
 function framesFor() {
-  const { lo, body, hair, beard, facing, mode, style } = state, bodyObj = { type: body, hair, beard };
-  const key = JSON.stringify([clean(lo), body, hair, beard, facing, mode, style]);
+  const { lo, body, hair, beard, facing, mode, style, ward } = state, bodyObj = { type: body, hair, beard };
+  const key = JSON.stringify([clean(lo), body, hair, beard, facing, mode, style, ward]);
   if (cache.has(key)) return cache.get(key);
-  const [view, flip] = FACING_VIEW[facing], st = stanceOf(lo), pieces = fxPieces(lo, TWO_HANDED), attack = mode === "attack";
-  const poses = attack ? [0, 1, 2, 3] : [0, 1], feetX = attack ? 48 : 24, ms = attack ? ATTACK_MS : IDLE_MS;
+  const [view, flip] = FACING_VIEW[facing], st = stanceOf(lo), pieces = [...fxPieces(lo, TWO_HANDED), ...wardPiece(ward, view)], A = ANIMS[mode], attack = mode !== "idle";
+  const poses = A.poses, feetX = attack ? 48 : 24, ms = A.ms;
   if (attack) setCell(96, 24);
   const frames = poses.map((p, i) => {
     const pose = attack ? p : 0, bob = attack ? 0 : p, u = dress(lo, view, bob, bodyObj, null, st, pose);
@@ -109,7 +123,8 @@ function pick(slot, id) {
 }
 function render() {
   const { lo } = state;
-  $("modes").replaceChildren(...[["idle", "Idle"], ["attack", "Attack"]].map(([m, l]) => chip(l, state.mode === m, () => { state.mode = m; start = performance.now(); render(); })));
+  $("modes").replaceChildren(...Object.entries(ANIMS).map(([m, a]) => chip(a.label, state.mode === m, () => { state.mode = m; start = performance.now(); render(); })));
+  $("wards").replaceChildren(...Object.entries(WARDS).map(([w, l]) => chip(l, state.ward === w, () => { state.ward = w; state.fx = true; render(); })));
   $("views").replaceChildren(
     chip("Turn left", false, () => { state.facing = turn(state.facing, -1); render(); }),
     ...FACINGS.map((f) => chip(f, state.facing === f, () => { state.facing = f; render(); })),
@@ -139,7 +154,7 @@ function render() {
   $("shape").textContent = sh.s; $("shapeName").textContent = sh.name;
   $("widths").textContent = `SHOULDERS ${sh.sh} PX · HEM ${sh.hem} PX`;
   $("stance").textContent = `STANCE: ${STANCE_NAMES[st] ?? STANCES[st]?.name ?? st} · SET BY THE WEAPON`;
-  $("unitCap").textContent = `${state.facing} · ${state.mode === "attack" ? "ATTACK · 4 FRAMES" : "IDLE · 2 FRAMES"} · 4×`;
+  $("unitCap").textContent = `${state.facing} · ${ANIMS[state.mode].cap} · 4×`;
   frames = framesFor();
   setupFx();
   drawArcs();
@@ -154,7 +169,7 @@ async function setupFx() {
   if (!state.fx || !pieces.length) { gfx = null; note(pieces.length ? "EFFECTS OFF" : "NO ENCHANTED GEAR EQUIPPED"); return; }
   try {
     PFX ??= await import("./pixelfx/core/index.js");
-    for (const id of ids) fxMods[id] ??= await import(`./pixelfx/fx/${id}.js`);
+    for (const id of ids) fxMods[id] ??= await import(id.startsWith("ward/") ? `./fx/${id}.js` : `./pixelfx/fx/${id}.js`);
   } catch (e) { pfxFailed = true; gfx = null; note("EFFECTS NEED THE PIXELFX FILES IN docs/pixelfx (npm run site)"); return; }
   gfx ??= new GearFx(PFX, fxMods, SW, SH, FEET);
   gfx.sync(pieces);

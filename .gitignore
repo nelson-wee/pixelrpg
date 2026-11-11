@@ -2,3 +2,4 @@ node_modules/
 preview*.png
 .DS_Store
 docs/pixelfx/
+records/

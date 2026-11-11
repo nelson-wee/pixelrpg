@@ -169,6 +169,10 @@ console.log("ok", mapInfo);
   const s2 = new Img(16 * LW, rows.length * CH);
   rows.forEach(([lo, bd], r) => ["SE", "NW", "SW", "NE"].forEach((f, fi) => [0, 1, 2, 3].forEach((p) => s2.blit(drawUnit(lo, f, 0, bd, stanceOf(lo), p), (fi * 4 + p) * LW, r * CH))));
   s2.png("attacks.png");
+  // reactions: per row the ready pose, the flinch (hurt:0, hurt:1) and the block (block:0, block:1), for SE then NW
+  const RX = ["0", ...core.REACTIONS.hurt, ...core.REACTIONS.block], s4 = new Img(RX.length * 2 * LW, rows.length * CH);
+  rows.forEach(([lo, bd], r) => ["SE", "NW"].forEach((f, fi) => RX.forEach((p, i) => s4.blit(drawUnit(lo, f, 0, bd, stanceOf(lo), p === "0" ? 0 : p), (fi * RX.length + i) * LW, r * CH))));
+  s4.png("reactions.png");
 }
 // dual wield across classes: same stance with three weapon pairs
 {
