@@ -127,7 +127,7 @@ const hitStop = (ms) => { stopUntil = performance.now() + ms; };
 let b, vis, ui, floats, shots, effects = [];
 function reset() {
   b = B.newBattle();
-  vis = new Map(b.units.map((u) => [u.id, { pos: null, depth: null, facing: null, pose: null, flash: 0, shake: 0, gone: false, blink: false, hp: u.hp }]));
+  vis = new Map(b.units.map((u) => [u.id, { pos: null, depth: null, facing: null, pose: null, flash: 0, gone: false, blink: false, hp: u.hp }]));
   ui = { mode: "idle", sel: null, target: null, from: null, reach: null, hover: null, cursor: [4, 7], busy: false, info: null };
   floats = []; shots = []; effects = [];
   $("over").classList.remove("show");
@@ -195,13 +195,13 @@ function draw() {
     const here = effects.filter((e) => !e.overlay && e.depth === k);
     for (const e of here) drawFx(e, "back");
     for (const u of byDepth.get(k) ?? []) {
-      const v = vis.get(u.id), [fx, fy] = unitPos(u), facing = v.facing ?? u.facing;
-      const shake = v.shake > clock ? (Math.floor(clock / 40) % 2 ? 2 : -2) : 0;
+      const v = vis.get(u.id), facing = v.facing ?? u.facing, [kx, ky] = knockOf(v);
+      const [fx, fy] = unitPos(u).map((c, i) => c + (i ? ky : kx));
       ctx.drawImage(ringOf(u.team, facing), Math.round(fx) - 20, Math.round(fy) - 10);
       if (v.blink && Math.floor(clock / 80) % 2) continue;
       const bob = v.walking ? Math.floor(clock / STEP_MS) % 2 : (beat + b.units.indexOf(u)) % 2;
-      const sp = spriteOf(u, facing, bob, v.pose), pic = v.flash > clock ? sp.white : u.done && u.alive ? sp.dim : sp.c;
-      ctx.drawImage(pic, Math.round(fx) - sp.fx + shake, Math.round(fy) - FY + 1);
+      const sp = spriteOf(u, facing, bob, v.pose ?? reactionOf(v)), pic = v.flash > clock ? sp.white : u.done && u.alive ? sp.dim : sp.c;
+      ctx.drawImage(pic, Math.round(fx) - sp.fx, Math.round(fy) - FY + 1);
     }
     for (const e of here) drawFx(e, "front");
   }
@@ -252,6 +252,22 @@ function frame(now) {
 }
 
 // ---------- animation ----------
+// a hit: the unit flinches (hurt:0, then hurt:1 half way back) and is knocked 2 px away from the blow, then settles
+const FLINCH = [170, 230];
+function flinch(t, from) {
+  const vt = vis.get(t.id), [ax, ay] = from, [tx, ty] = unitPos(t), L = Math.hypot(tx - ax, ty - ay) || 1;
+  vt.react = { t0: clock, dx: ((tx - ax) / L) * 2, dy: ((ty - ay) / L) * 1 };
+}
+function reactionOf(v) {
+  const r = v.react; if (!r) return null;
+  const k = clock - r.t0;
+  return k < FLINCH[0] ? "hurt:0" : k < FLINCH[0] + FLINCH[1] ? "hurt:1" : null;
+}
+function knockOf(v) {
+  const r = v.react; if (!r) return [0, 0];
+  const k = clock - r.t0, f = k < FLINCH[0] ? 1 : k < FLINCH[0] + FLINCH[1] ? 1 - (k - FLINCH[0]) / FLINCH[1] : 0;
+  return [Math.round(r.dx * f), Math.round(r.dy * f)];
+}
 async function walk(u, path) {
   const v = vis.get(u.id); let from = u.tile;
   v.walking = true;
@@ -282,7 +298,7 @@ async function attackAnim(u, t) {
   v.facing = facing;
   const impact = () => {
     const r = B.strike(b, u, t);
-    vt.hp = t.hp; vt.flash = clock + 90; vt.shake = clock + 220;
+    vt.hp = t.hp; vt.flash = clock + 90; flinch(t, unitPos(u));
     const [x, y] = unitPos(t), top = spriteOf(t, "SE", 0, null).top, hy = y - FY + 1 + top - 10;
     floats.push({ text: String(r.dmg), x, y: hy, color: "#fbf2dc", size: 12, t0: clock, dur: 1000 });
     if (r.side !== "front") floats.push({ text: r.side.toUpperCase() + "!", x, y: hy - 11, color: SIDE_COLOR[r.side], size: 8, t0: clock, dur: 1000 });
@@ -315,7 +331,7 @@ async function castAnim(u, id, tile) {
       ve.hp = e.unit.hp;
       if (e.kind === "heal") floats.push({ text: `+${e.amount}`, x, y: hy, color: "#a4e08a", size: 12, t0: clock, dur: 1100 });
       else {
-        ve.flash = clock + 90; ve.shake = clock + 220; back ||= e.side === "back";
+        ve.flash = clock + 90; flinch(e.unit, feetOf(...tile)); back ||= e.side === "back";
         floats.push({ text: String(e.amount), x, y: hy, color: "#fbf2dc", size: 12, t0: clock, dur: 1000 });
         if (e.side !== "front") floats.push({ text: e.side.toUpperCase() + "!", x, y: hy - 11, color: SIDE_COLOR[e.side], size: 8, t0: clock, dur: 1000 });
       }
