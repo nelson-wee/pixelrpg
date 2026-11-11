@@ -18,7 +18,7 @@ The tools need Node 18 or newer. They use no packages.
 
 ## Web viewer (GitHub Pages)
 
-`docs/` is a static site with two pages. The Wardrobe (`index.html`) draws units live in the browser with the same sprite code that makes the sheets. You can select class tiers, any gear piece, the male or female body, the hair colour and the facing, and switch between the idle and the attack animation. The battle demo (`battle.html`) is described below.
+`docs/` is a static site with two pages. The Wardrobe (`index.html`) draws units live in the browser with the same sprite code that makes the sheets. You can select class tiers, any gear piece, the male or female body, the hair colour and the facing, and play the idle, attack, hurt (flinch) or block animation. The Ward row previews the two shield effects on the unit. The battle demo (`battle.html`) is described below.
 
 To play live gear effects, the viewer needs the pixelfx source in `docs/pixelfx` (git-ignored). `npm run site` copies it there, and the Pages workflow runs the same step before it uploads the site.
 
@@ -88,6 +88,8 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | `docs/lib/battle.js` | The battle rules: demo map, demo teams, skills and MP, movement, facing damage, turns, enemy AI. No DOM |
 | `docs/battle.html`, `docs/battle.js` | The battle demo page |
 | `tools/battle-test.mjs` | Tests for the battle rules (`npm test`) |
+| `docs/fx/` | pixelrpg's own pixelfx effects, in the pixelfx file format: `ward/arcane-ward` and `ward/bulwark`. They import the pixelfx core from `docs/pixelfx` |
+| `tools/fxlab.mjs` | Renders and checks the effects in `docs/fx` with one of our units as the actor (contact sheet, canvas bounds, loop seam, randomness, speed) |
 | `tools/fx.mjs` | Renders the chosen pixelfx effects as one-row strips at 15 fps, recoloured with the system ramps |
 | `tools/zoom.mjs` | Nearest-neighbour preview of a PNG |
 | `sprites/art/` | Generated sheets and atlases, plus `gear.json` (atlas cells, shoulder and hem widths) and `art.json` |
@@ -109,6 +111,8 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 - **Team colours:** a scheme in `TEAM_SCHEMES` swaps the dyed ramps of the gear layers (cloth, trim and metal) to a team palette: **Crimson** (blood red and charcoal, blackened steel), **Ebony** (charcoal and ash, blackened steel) and **Verdant** (moss green and bone, bronze). Leather, skin and hair keep their colours. Set it as `body.scheme` in `dress()` or `drawUnit()`, or call `recolor(img, scheme)` on one layer.
 - **Gear with live effects:** a gear piece can carry an `fx` entry: a pixelfx effect that plays while the piece is equipped. pixelfx body effects read a character mask, so `docs/lib/gearfx.js` gives them our own mask each frame. With `target: "self"` the mask is the piece's own pixels (a burning blade); with `target: "body"` it is the whole unit (an aura from worn gear). The effect runs on its own clock and draws a back layer behind the unit and a front layer over it, in every pose and facing. The pilot items: **flame sword** (`status/burning`), **frost staff** (`status/frozen`), **storm spear** (`lightning/electrified`, two-handed), **shadow daggers** (`status/burning` with a violet-black ramp) and **holy vestments** (`holy/blessing` over the whole body).
 - **Two-handed weapons:** the greatsword, the spear and the dragon lance use both hands, so the off-hand layer is not drawn. The short spear is one-handed and goes with a shield. It uses the guard ready pose and has its own thrust attack.
+- **Reactions:** two more pose sets in the wide 96 px cell, named like attack poses: `hurt:0` and `hurt:1`, `block:0` and `block:1`. The flinch folds the body in (knees bend, the upper body drops 3 px, the arms pull in, the weapon droops), so it reads the same whichever side the blow came from; the battle adds a 2 px knock away from the attacker and a white hit flash. The block brings the guard up toward the unit's own front: the shield (guard, spear and shield), the staff upright (caster), the bow (archer), crossed blades (dual wield), the spear across the body (lancer) or the greatsword upright as a ward. Frame 1 of each is the recovery or the impact.
+- **Shield effects:** two status loops of our own in `docs/fx/ward`. **Arcane ward** is a magical energy shield: a bell of violet light whose edge ripples like silk, aurora curtains and threads of mana climbing its walls, a band of runes turning round the waist, a sigil at the crown and a rune seal on the floor. **Bulwark** is the knightly one: a planted tower shield of steel with gold trim, rivets, an embossed cross and a gleam sweeping its face, its shadow on the floor, and a glint running down the unit's armour. The shield stands on the unit's front: pass `{ behind: true, dir: -1 }` when the unit is seen from the back.
 - **Attacks:** 4 frames (ready 560 ms, wind-up 320 ms, strike 200 ms, follow-through 350 ms) in a 96 × 76 px cell, with the feet at (48, 72).
 - **Effects on attacks:** an effect starts so that its own `act` hit time lands on our strike frame. On the hit, the whole picture freezes for the effect's hit-stop. Melee effects tilt 0.2–0.25 rad down to face SE. Projectiles start at the releasing hand on the strike frame and fly to the target's body centre (16 px above its feet), at 24 px per frame for arrows and 16 px per frame for spells.
 - **Tiles:** 48 × 24 px on a 2:1 grid, with 12 px for each height step. Screen X = (col − row) × 24. Screen Y = (col + row) × 12 − height × 12.
@@ -121,6 +125,7 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | `teams.png` | 5 rows × 6 classes, SE idle, 48 × 76: the player side, then the enemy side (middle tier, other body) with no scheme, Crimson, Ebony and Verdant |
 | `facings.png` | 6 rows (classes) × 4 columns (NE, SE, SW, NW), each unit on an iso tile, 48 × 100 per cell |
 | `tiers.png` | 6 rows (classes) × 6 columns (T1–T3 male, T1–T3 female) |
+| `reactions.png` | 8 rows (as `attacks.png`) × 10 frames of 96 × 76: ready, hurt:0, hurt:1, block:0, block:1 for SE, then the same for NW |
 | `attacks.png` | 8 rows × 16 frames of 96 × 76: 4 poses each for SE, NW, SW, then NE. Rows: the 6 classes, then the knight with a greatsword, then the lancer with spear and shield |
 | `atlas-<m\|f>-<stance>.png` | Every gear layer alone, 12 columns of 48 × 76. Cell positions are in `gear.json`. The phalanx (spear and shield) atlas is the same as the guard atlas |
 | `combat-<clip>.png` | Attack clips with pixelfx effects, one row at 15 fps: knight sword, knight greatsword, thief riposte, lancer thrust, lancer spear and shield, mage fireball, archer arrow. Frame size, hit frame and hit-stop are in `combat.json` |

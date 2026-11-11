@@ -263,6 +263,43 @@ ATK.phalanx = [
   { main: { e: [25.6, 23.4], h: [31, 22] }, mainDir: [0.97, -0.24], lean: 0.18, dc: 1, step: 5 },
   { main: { e: [23.4, 25], h: [28, 23] }, mainDir: [0.95, -0.31], lean: 0.14, step: 4 },
 ];
+// ---------- reactions: flinch (hurt) and block, two frames each ----------
+// Pose names "hurt:0", "hurt:1", "block:0", "block:1" go where an attack pose number goes (rig, dress, drawUnit),
+// and they use the wide 96 px cell like the attack poses.
+// hurt: the body folds in on itself (knees buckle, the head drops, the arms pull in, the weapon droops), so it reads
+// the same whichever side the blow came from; the battle adds a short knock away from the attacker. Frame 1 is the
+// recovery, half way back. block: the guard comes up toward the unit's own front (the shield, a weapon across the
+// body, or crossed blades); frame 1 takes the blow, pushed back a little.
+const REACTIONS = { hurt: ["hurt:0", "hurt:1"], block: ["block:0", "block:1"] };
+const rot2 = ([x, y], a) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+const nudge = (pt, [dx, dy], k = 1) => [pt[0] + dx * k, pt[1] + dy * k];
+const BLOCK = {
+  guard:  { main: { e: [18.6, 27.6], h: [21.6, 27.8] }, off: { e: [35.4, 23.6], h: [39.6, 24.2] }, mainDir: [0.22, -0.975], offDir: [0.1, -0.995], lean: 0.12, dc: 1, step: 1 },
+  caster: { main: { e: [22.6, 26.4], h: [28.4, 27.6] }, off: { e: [35.6, 22.4], h: [40, 21.2] }, mainDir: [0.12, -0.993], lean: 0.1, dc: 1, step: 1 },
+  archer: { main: { e: [21.4, 26.4], h: [27, 25.4] }, off: { e: [35, 21.6], h: [39.4, 21.4] }, lean: 0.1, dc: 1, step: 1 },
+  rogue:  { main: { e: [25.4, 26], h: [31.4, 24.4] }, off: { e: [34.6, 22.6], h: [36.4, 24.6] }, mainDir: [0.55, -0.835], offDir: [-0.4, -0.917], lean: 0.1, dc: 1, step: 1 },
+  // the spear comes up across the body, both hands on the shaft (the off hand 9.6 px up it)
+  lancer: { main: { e: [21.4, 28], h: [27, 29.4] }, off: { e: [33.6, 22.4], h: [32.4, 21.4] }, mainDir: [0.56, -0.83], offDir: [0.56, -0.83], lean: 0.1, dc: 1, step: 1 },
+  // the greatsword stands upright in front as a ward (rig puts the off hand on the grip)
+  greatsword: { main: { e: [24, 26.6], h: [30, 28] }, off: { e: [32.6, 24.6], h: [0, 0] }, mainDir: [0.1, -0.995], lean: 0.1, dc: 1, step: 1 },
+};
+BLOCK.phalanx = BLOCK.guard;
+function reactPose(stance, name) {
+  const [kind, n] = name.split(":"), frame = +n || 0;
+  if (kind === "block") {
+    const B = BLOCK[stance] ?? BLOCK.guard;
+    if (!frame) return B;
+    const back = [-1.6, 0.8], two = stance === "lancer";
+    return { ...B, main: { e: nudge(B.main.e, back), h: nudge(B.main.h, back) }, off: two ? { e: nudge(B.off.e, back), h: nudge(B.off.h, back) } : { e: nudge(B.off.e, back), h: nudge(B.off.h, back) }, lean: B.lean - 0.05, dc: B.dc + 1, step: B.step - 2 };
+  }
+  // hurt: start from the stance's own ready pose and fold it in
+  const S = STANCES[stance] ?? STANCES.guard, k = frame ? 0.45 : 1, shaft = stance === "lancer", grip = stance === "greatsword";
+  const dm = [-1.2, 1.8], doff = shaft || grip ? dm : [-3.2, 2.6], tilt = shaft ? 0 : 0.32 * k;
+  return {
+    main: { e: nudge(S.main.e, dm, k), h: nudge(S.main.h, dm, k) }, off: { e: nudge(S.off.e, doff, k), h: grip ? [0, 0] : nudge(S.off.h, doff, k) },
+    mainDir: rot2(S.mainDir, tilt), offDir: shaft ? S.offDir : S.offDir, lean: S.lean * (1 - k) - 0.03 * k, dc: Math.round(3 * k), step: -Math.round(k),
+  };
+}
 const POSES = ["Ready", "Wind-up", "Strike", "Follow-through"];
 const BOWS = ["bow", "shortbow", "greatbow"], SPEARS = ["spear", "dragonspear", "stormspear"], RODS = ["staff", "rod", "sceptre", "froststaff"];
 function stanceOf(lo = {}) {
@@ -275,7 +312,7 @@ function stanceOf(lo = {}) {
   return "guard";
 }
 function rig(view, bob, body = {}, stance = "guard", pose = 0) {
-  const S0 = STANCES[stance] ?? STANCES.guard, A = (pose && ATK[stance]?.[pose - 1]) || {};
+  const S0 = STANCES[stance] ?? STANCES.guard, A = typeof pose === "string" ? reactPose(stance, pose) : (pose && ATK[stance]?.[pose - 1]) || {};
   const S = { ...S0, ...A, main: A.main ?? S0.main, off: A.off ?? S0.off, crouch: S0.crouch + (A.dc ?? 0), step: A.step ?? 0 }, f = view === "front", fem = body.type === "f", n = fem ? 0.6 : 0;
   const b = bob + S.crouch - STYLE.lift, d = f ? 1 : -1, mx = (x) => (f ? x : 49 - x);
   const shift = S.step * 0.5 * d, at = ([x, y]) => [mx(x) + shift, y + b];
@@ -1519,4 +1556,4 @@ function frame(style) {
 }
 
 setStyle("muted");
-export { TEAM_SCHEMES, SCHEME_RAMPS, recolor, FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, L, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
+export { REACTIONS, reactPose, TEAM_SCHEMES, SCHEME_RAMPS, recolor, FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, L, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
