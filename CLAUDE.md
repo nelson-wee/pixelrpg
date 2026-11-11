@@ -6,5 +6,6 @@
 - New effects of our own go in `docs/fx/<category>/<name>.js`, in the pixelfx file format, importing the core from `../../pixelfx/core/index.js` (copied there by `npm run site`). Render and check them with `node tools/fxlab.mjs <category>/<name>` (it uses one of our units as the actor), and follow the pixelfx skill's look-and-refine loop.
 - `sprites/` is generated output. The drawing code is in `docs/lib/pixelrpg.js` (shared with the web viewer). The sheet exports are in `tools/art.mjs`. To change the art, change those files and run `npm run art`, then commit the code and the sprites together.
 - `docs/` is the GitHub Pages site. `docs/lib/pixelrpg.js` must stay free of Node APIs so that it runs in the browser.
+- Look presets (gear sets per archetype) are in `docs/lib/presets.js`; they set looks only. Stats and skills come from `docs/lib/character.js` (archetypes, `makeCharacter`). Keep looks and stats apart, so any character can wear any gear.
 - The battle rules are in `docs/lib/battle.js`. Keep them free of DOM and Node APIs. Run `npm test` after you change them. The demo map in that file is also used by `tools/art.mjs`.
 - The art rules (palette, 48 × 76 unit cell, gear slots, stances, 48 × 24 tiles) are in `README.md`. Keep new art inside them.

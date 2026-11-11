@@ -1,21 +1,10 @@
 // Wardrobe viewer: draws a unit live with the sprite core and plays its idle or attack animation.
-import { CLASSES, KNIGHT_GS, LANCER_PH, ENCHANTED, TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0, FACINGS, FACING_VIEW, drawUnit, turn, attackSide } from "./lib/pixelrpg.js";
+import { TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0, FACINGS, FACING_VIEW, drawUnit, turn, attackSide } from "./lib/pixelrpg.js";
 import { GearFx, fxPieces, over, place } from "./lib/gearfx.js";
-
-// short chip labels for every piece, by slot
-const SLOTS = [
-  ["head", "HEAD", [["greathelm", "Great helm"], ["coif", "Mail coif"], ["leathercap", "Leather cap"], ["winghelm", "Spire helm"], ["kettle", "Kettle hat"], ["wizhat", "Brim hat"], ["magehood", "Pointed hood"], ["cap", "Apprentice cap"], ["mitre", "Mitre"], ["veil", "Veil"], ["hood", "Hood"], ["huntercap", "Feather cap"], ["falconhelm", "Winged helm"], ["cowl", "Cowl"], ["bandana", "Bandana"], ["shadowmask", "Demon mask"]]],
-  ["shoulders", "SHOULDERS", [["pauldrons", "Pauldrons"], ["halfpauldrons", "Half pauldrons"], ["leatherpads", "Leather pads"], ["darkpads", "Lacquered pads"], ["spaulders", "Spaulders"], ["mantle", "Mantle"], ["collar", "Collar"]]],
-  ["chest", "CHEST", [["holyvestments", "Holy vestments (fx)"], ["plate", "Plate"], ["chainK", "Hauberk + cross"], ["chain", "Hauberk teal"], ["leatherarmor", "Studded leather"], ["scaleplate", "Dragon scale"], ["gambeson", "Gambeson"], ["robe", "Archmage robe"], ["simplerobe", "Adept robe"], ["shortrobe", "Short robe"], ["gown", "Gown"], ["vestment", "Vestment"], ["habit", "Habit"], ["brigandine", "Brigandine"], ["jerkin", "Jerkin"], ["tunic", "Tunic"], ["garb", "Garb"], ["lamellar", "Lamellar"], ["darktunic", "Patched tunic"]]],
-  ["arms", "ARMS", [["gauntlets", "Gauntlets"], ["mail", "Mail"], ["bracers", "Bracers"], ["bell", "Bell sleeves"], ["magesleeves", "Straight sleeves"], ["sleeves", "Long sleeves"], ["woolsleeves", "Wool sleeves"]]],
-  ["legs", "LEGS", [["greaves", "Greaves"], ["chausses", "Chausses"], ["leggings", "Leggings"], ["trousers", "Trousers"], ["wraps", "Wraps"]]],
-  ["back", "BACK", [["templecloak", "Trimmed cloak"], ["cape", "Cape"], ["dragoncape", "Dragon cape"], ["cloak", "Cloak"], ["wardencloak", "Warden cloak"], ["quiver", "Quiver"], ["scarf", "Scarf"], ["longscarf", "Long scarf"]]],
-  ["main", "MAIN HAND", [["flamesword", "Flame sword (fx)"], ["froststaff", "Frost staff (fx)"], ["stormspear", "Storm spear (2H, fx)"], ["shadowdagger", "Shadow dagger (fx)"], ["sword", "Sword"], ["greatsword", "Greatsword (2H)"], ["mace", "Mace"], ["dagger", "Dagger"], ["shortspear", "Short spear"], ["spear", "Spear (2H)"], ["dragonspear", "Dragon lance (2H)"], ["staff", "Staff"], ["rod", "Rod"], ["sceptre", "Sceptre"]]],
-  ["off", "OFF HAND", [["shadowdagger", "Shadow dagger (fx)"], ["shield", "Kite shield"], ["buckler", "Buckler"], ["dagger", "Dagger"], ["offsword", "Sword"], ["offmace", "Mace"], ["bow", "Longbow"], ["shortbow", "Short bow"], ["greatbow", "Greatbow"], ["tome", "Book"]]],
-];
+import { LOOKS, KNIGHT_GS, LANCER_PH, ENCHANTED } from "./lib/presets.js";
+import { SLOTS, HAIRS, STANCE_NAMES } from "./lib/gearlist.js";
 const KEYS = SLOTS.map(([k]) => k);
-const HAIRS = [["hair", "Brown"], ["crimson", "Red"], ["hairB", "Blue-black"], ["ink", "Black"], ["grey", "Grey"]];
-const STANCE_NAMES = { guard: "GUARD", caster: "CASTER", archer: "ARCHER", rogue: "DUAL WIELD · SWORD & DAGGER", lancer: "LANCER (2H)", greatsword: "GREATSWORD (2H)", phalanx: "SPEAR & SHIELD" };
+
 // attack frame timing in ms: ready, wind-up, strike, follow-through
 const ATTACK_MS = [560, 320, 200, 350], IDLE_MS = [600, 600];
 // every animation: its poses (numbers are attack poses, names are reactions) and how long each shows, in ms.
@@ -34,7 +23,7 @@ const wardPiece = (ward, view) => ward === "none" ? [] : [{ slot: "ward", id: `$
   opts: ward === "bulwark" && view === "back" ? { behind: true, dir: -1 } : {} } }];
 
 // presets: every class's three tiers, plus the two weapon variants
-const PRESETS = Object.entries(CLASSES).map(([key, k]) => {
+const PRESETS = Object.entries(LOOKS).map(([key, k]) => {
   const tiers = k.tiers.map(([name, mat, lo], i) => ({ name, label: `${k.name} · T${i + 1} ${name} (${mat})`, lo, body: k.body }));
   if (key === "knight") tiers.push({ name: "Greatsword", label: "Knight · Greatsword", lo: KNIGHT_GS, body: k.body });
   if (key === "lancer") tiers.push({ name: "Phalanx", label: "Lancer · Spear & shield", lo: LANCER_PH, body: k.body });
@@ -44,7 +33,7 @@ const PRESETS = Object.entries(CLASSES).map(([key, k]) => {
 // enchanted pilot items: each loadout wears one piece that carries a live pixelfx effect
 PRESETS.push({ cls: "Enchanted", tiers: ENCHANTED.map(([key, name, lo, body]) => ({ name, label: `Enchanted · ${name}`, lo, look: { body: body.type, hair: body.hair, beard: false } })) });
 
-const state = { lo: { ...CLASSES.knight.loadout }, body: "m", hair: "hair", beard: false, facing: "SE", mode: "idle", style: STYLE.name, fx: true, ward: "none" };
+const state = { lo: { ...LOOKS.knight.loadout }, body: "m", hair: "hair", beard: false, facing: "SE", mode: "idle", style: STYLE.name, fx: true, ward: "none" };
 const clean = (lo) => Object.fromEntries(KEYS.filter((k) => lo[k]).map((k) => [k, lo[k]]));
 const same = (a, b) => KEYS.every((k) => (a[k] || null) === (b[k] || null));
 

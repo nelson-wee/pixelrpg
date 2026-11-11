@@ -51,7 +51,11 @@ python3 -m http.server --directory docs 8000
 | Mage | 22 | 20 | 12 | 3 | 2–3 | Fireball |
 | Cleric | 30 | 18 | 7 | 3 | 1 | Heal |
 
-The rules are in `docs/lib/battle.js`, with no DOM. `npm test` runs `tools/battle-test.mjs`, which checks the facing math, the movement rules and the skills (MP cost, heal limit, plus-shaped area, friendly fire), and plays a full battle with the AI on both sides. The map data is shared with `tools/art.mjs`, so `battle-map.png` shows the same ground.
+**Party screen.** The battle page opens on "Prepare your party". Select a character, then change its gear by slot or with a look preset, and its body, hair and beard. The preview shows the idle and attack animation, the stance that the weapon sets, and the stats and skills from the archetype. The party is saved in the browser; Reset party gives the demo party again. Start battle uses the party; Change gear (in the battle bar and after a battle) goes back to this screen. The rules are in `docs/lib/party.js` (`equip`, `wearPreset`, `setBody`, `parseParty`, with no DOM), and the screen is `docs/muster.js`.
+
+**Characters and units.** A *character* is the part of a unit that lives between battles; later, a roguelike run keeps a party of them and rebuilds them before each battle. A character definition is plain data: `{ id, name, archetype, look: { name, loadout, body }, talents: [] }`. `makeCharacter()` derives the stats and skills from the archetype (and, later, from the talents). The look is separate, so any character can wear any gear: a knight in a mage's robe keeps knight stats. A battle places characters on the map as *units* with `{ character, team, tile, facing }`. A unit copies the stats at the start and keeps its own tile, facing, health and MP, so a battle never changes the character.
+
+The rules are in `docs/lib/battle.js`, with no DOM. `npm test` runs `tools/battle-test.mjs` and `tools/party-test.mjs`, which check the party rules (gear changes, saving and loading), the facing math, the movement rules and the skills (MP cost, heal limit, plus-shaped area, friendly fire), and plays a full battle with the AI on both sides. The map data is shared with `tools/art.mjs`, so `battle-map.png` shows the same ground.
 
 ## Make the sprites again
 
@@ -76,7 +80,12 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | `docs/lib/pixelrpg.js` | The sprite core: palette, skeleton, gear, stances, attacks, tiles, props, icons, UI frames. Pure JavaScript, used by both the generator and the web viewer |
 | `tools/art.mjs` | The generator: writes every sheet in `sprites/art`, the battle map and the combat clips |
 | `docs/index.html`, `docs/app.js` | The web viewer (Wardrobe) |
-| `docs/lib/battle.js` | The battle rules: demo map, class stats, skills and MP, movement, facing damage, turns, enemy AI. No DOM |
+| `docs/lib/presets.js` | Look presets: the named gear sets and bodies of each archetype in three tiers, the weapon variants and the enchanted pilot loadouts. Looks only, no stats |
+| `docs/lib/character.js` | Characters: archetypes (base stats, skills, projectile) and `makeCharacter`, which turns a character definition into a character with derived stats. No DOM |
+| `docs/lib/party.js` | The party between battles: gear changes (two-handed rules), look names, and safe save and load. No DOM |
+| `docs/lib/gearlist.js` | Chip labels for every gear piece, hair colours and stance names, shared by the Wardrobe and the party screen |
+| `docs/muster.js` | The party screen on the battle page |
+| `docs/lib/battle.js` | The battle rules: demo map, demo teams, skills and MP, movement, facing damage, turns, enemy AI. No DOM |
 | `docs/battle.html`, `docs/battle.js` | The battle demo page |
 | `tools/battle-test.mjs` | Tests for the battle rules (`npm test`) |
 | `docs/fx/` | pixelrpg's own pixelfx effects, in the pixelfx file format: `ward/arcane-ward` and `ward/bulwark`. They import the pixelfx core from `docs/pixelfx` |

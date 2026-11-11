@@ -2,6 +2,8 @@
 import { TW, TH, STEP, HW, HH, FX, FY, Img, tile, cursor, prop, drawUnit, setCell, stanceOf, FACING_DIR, facingToward, attackSide, TEAM_SCHEMES } from "./lib/pixelrpg.js";
 import * as B from "./lib/battle.js";
 import { actorFrom } from "./lib/gearfx.js";
+import * as P from "./lib/party.js";
+import { createMuster } from "./muster.js";
 
 const $ = (id) => document.getElementById(id);
 const N = B.N, W = N * TW + HW, H = N * TH + 6 * STEP + 76, OX = N * HW - HW + 8, OY = 60;
@@ -126,7 +128,7 @@ const hitStop = (ms) => { stopUntil = performance.now() + ms; };
 // ---------- state ----------
 let b, vis, ui, floats, shots, effects = [];
 function reset() {
-  b = B.newBattle();
+  b = B.newBattle(B.demoRoster(party));
   vis = new Map(b.units.map((u) => [u.id, { pos: null, depth: null, facing: null, pose: null, flash: 0, gone: false, blink: false, hp: u.hp }]));
   ui = { mode: "idle", sel: null, target: null, from: null, reach: null, hover: null, cursor: [4, 7], busy: false, info: null };
   floats = []; shots = []; effects = [];
@@ -247,7 +249,7 @@ function frame(now) {
   const dt = Math.min(50, now - last); last = now;
   if (now >= stopUntil) { clock += dt; stepFx(dt); }
   for (let i = waiters.length - 1; i >= 0; i--) if (waiters[i].at <= clock) { waiters[i].r(); waiters.splice(i, 1); }
-  draw();
+  if (b) draw();
   requestAnimationFrame(frame);
 }
 
@@ -308,7 +310,7 @@ async function attackAnim(u, t) {
   for (const [i, ms] of ATTACK_MS.slice(0, 2).entries()) { v.pose = i; await wait(ms); }
   v.pose = 2;
   if (B.RANGED(u)) {
-    const flight = fly(u, t, u.cls === "archer" ? "arrow" : "spell");
+    const flight = fly(u, t, u.projectile ?? "spell");
     await wait(ATTACK_MS[2]); v.pose = 3;
     await flight; impact(); await wait(320);
   } else {
@@ -634,6 +636,7 @@ function refresh() {
   $("actions").replaceChildren(...a);
   $("endTurn").disabled = ui.busy || b.phase !== "player";
   $("restart").disabled = ui.busy && ui.mode !== "over";
+  $("loadout").disabled = ui.busy && ui.mode !== "over";
   const h = ui.hover && B.unitAt(b, ui.hover);
   unitCard(h || ui.info || sel || null);
   $("schemes").replaceChildren(...[...Object.entries(TEAM_SCHEMES).map(([k, v]) => [k, v.name]), ["", "Own gear colours"]].map(([k, name]) =>
@@ -681,7 +684,24 @@ $("again").addEventListener("click", reset);
 $("arcs").addEventListener("change", refresh);
 window.addEventListener("resize", fit);
 
-window.__battle = () => ({ b, ui }); // for tests and the console
-fit();
-reset();
+// ---------- the party screen before each battle ----------
+// The party is saved in this browser (a convenience only; the demo party comes back if storage is blocked).
+const PARTY_KEY = "pixelrpg.party";
+let party = P.parseParty((() => { try { return localStorage.getItem(PARTY_KEY); } catch (e) { return null; } })());
+const saveParty = (p) => { party = p; try { localStorage.setItem(PARTY_KEY, P.serializeParty(p)); } catch (e) { /* storage blocked */ } };
+const muster = createMuster({
+  party,
+  onChange: saveParty,
+  onStart(p) { saveParty(p); muster.hide(); $("battleView").hidden = false; fit(); reset(); window.scrollTo(0, 0); },
+});
+function showMuster() {
+  if (ui?.busy && ui.mode !== "over") return;
+  $("over").classList.remove("show"); $("battleView").hidden = true;
+  muster.show(party); window.scrollTo(0, 0);
+}
+$("loadout").addEventListener("click", showMuster);
+$("overGear").addEventListener("click", showMuster);
+
+window.__battle = () => ({ b, ui, party }); // for tests and the console
+muster.show(party);
 requestAnimationFrame(frame);
