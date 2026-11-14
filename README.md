@@ -94,7 +94,7 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 - **Palette:** 19 ramps of 5 steps, in two sets (muted and classic). Dark steps go cooler and light steps go warmer. There is no anti-aliasing.
 - **Light:** one light, from the top left. Each shape has an outline in step 0 of its own ramp. Ink (`#2a1f2d`) is used only on the bottom-right edges.
 - **Units:** a 48 × 76 px cell, with the feet at (24, 72). A unit is about 5 heads tall.
-- **Gear:** one base body (male or female) plus 8 slots: head, shoulders, chest, arms, legs, back, main hand and off hand. Each layer has its own outline. There are 79 pieces and 3 tiers for each class.
+- **Gear:** one base body (male or female) plus 8 slots: head, shoulders, chest, arms, legs, back, main hand and off hand. Each layer has its own outline. There are 101 pieces and 3 tiers for each class.
 - **Silhouette:** heavy armour makes a V shape, robes make an A shape, and light gear makes an I shape.
 - **Dual wield:** after European sword and dagger (Bolognese and rapier-and-dagger fencing). In guard, the off-hand blade leads, held forward with its point up as a parry tool, and the main blade waits low at the hip with its point raised. The attack is a parry and riposte in one tempo: the main blade chambers at the hip, then the unit lunges 6 px as the off-hand blade sweeps high to deflect and the main arm thrusts fully, then recovers to guard.
 - **Stances:** the equipped weapon selects the stance: guard, caster, archer, dual wield, lancer, greatsword, or spear and shield. Units face SE (front) or NW (back), with the feet on the tile diagonal.
