@@ -1,7 +1,7 @@
 // Wardrobe viewer: draws a unit live with the sprite core and plays its idle or attack animation.
 import { TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCell, tile, Img, OY0, FACINGS, FACING_VIEW, drawUnit, turn, attackSide } from "./lib/pixelrpg.js";
 import { GearFx, fxPieces, over, place } from "./lib/gearfx.js";
-import { LOOKS, KNIGHT_GS, LANCER_PH, ENCHANTED } from "./lib/presets.js";
+import { LOOKS, KNIGHT_GS, LANCER_PH, DUELIST, ENCHANTED } from "./lib/presets.js";
 import { SLOTS, HAIRS, STANCE_NAMES } from "./lib/gearlist.js";
 const KEYS = SLOTS.map(([k]) => k);
 
@@ -27,6 +27,7 @@ const PRESETS = Object.entries(LOOKS).map(([key, k]) => {
   const tiers = k.tiers.map(([name, mat, lo], i) => ({ name, label: `${k.name} · T${i + 1} ${name} (${mat})`, lo, body: k.body }));
   if (key === "knight") tiers.push({ name: "Greatsword", label: "Knight · Greatsword", lo: KNIGHT_GS, body: k.body });
   if (key === "lancer") tiers.push({ name: "Phalanx", label: "Lancer · Spear & shield", lo: LANCER_PH, body: k.body });
+  if (key === "thief") tiers.push({ name: "Duelist", label: "Thief · Duelist (special set: rapier & main-gauche)", lo: DUELIST, body: k.body });
   if (key === "cleric") tiers.push({ name: "Elder", label: "Cleric · Elder (trimmed cloak, beard)", lo: { shoulders: "mantle", chest: "vestment", arms: "sleeves", back: "templecloak", main: "sword" }, look: { body: "m", hair: "grey", beard: true } });
   return { cls: k.name, tiers };
 });
