@@ -308,7 +308,7 @@ function stanceOf(lo = {}) {
   if (BOWS.includes(lo.off)) return "archer";
   if (SPEARS.includes(lo.main)) return "lancer";
   if (RODS.includes(lo.main) || lo.off === "tome") return "caster";
-  if (["dagger", "offsword", "offmace", "shadowdagger"].includes(lo.off) || lo.main === "dagger" || lo.main === "shadowdagger") return "rogue";
+  if (["dagger", "offsword", "offmace", "shadowdagger", "maingauche"].includes(lo.off) || lo.main === "dagger" || lo.main === "shadowdagger") return "rogue";
   return "guard";
 }
 function rig(view, bob, body = {}, stance = "guard", pose = 0) {
@@ -1150,6 +1150,150 @@ const ORDER = {
   front: ["back", "hair", "base", "legs", "chest", "limbs", "arms", "shoulders", "head", "off", "main"],
   back: ["main", "off", "limbs", "arms", "base", "legs", "chest", "back", "hair", "shoulders", "head"],
 };
+
+// ---------- rogue look proposals (A classic rogue, B renaissance duelist, C guild assassin) ----------
+const inHead = (K, x, y) => ((x + 0.5 - (K.hx - 0.6)) / 6.2) ** 2 + ((y + 0.5 - (K.hy - 0.4)) / 6.6) ** 2 < 1;
+// the shade a hood casts over the brow (and, deep, the eyes): drawn on the hood's own layer, over the face
+function hoodShade(img, K, y0, y1) {
+  if (!K.f) return;
+  for (let y = Math.floor(K.hy + y0); y <= K.hy + y1; y++) for (let x = Math.floor(K.hx - 1.6); x <= K.hx + 6; x++)
+    if (!img.get(x, y) && inHead(K, x, y)) img.set(x, y, P("ink", y < K.hy + y0 + 1 ? 1 : 2));
+}
+function shortswordAt(img, h, v) {
+  const p = [-v[1], v[0]], g = add2(h, v, 2.2);
+  pole(img, add2(h, v, 2.6), add2(h, v, 19), P("steel", 4), P("steel", 2));
+  for (let i = -3; i <= 3; i++) { const q = add2(g, p, i); img.set(q[0], q[1], P(Math.abs(i) === 3 ? "steel" : "leather", i < 0 ? 4 : 2)); }
+  const pm = add2(h, v, -2.6); img.set(pm[0], pm[1], P("steel", 3));
+}
+// rapier: a long thin blade, straight quillons, a knuckle bow round the hand and a round pommel
+function rapierAt(img, h, v) {
+  const p = [-v[1], v[0]];
+  for (let k = 2.6; k <= 34; k += 0.5) { const q = add2(h, v, k); img.set(q[0], q[1], P("steel", k < 12 ? 4 : 3)); }
+  for (let i = -3.5; i <= 3.5; i += 0.5) { const q = add2(add2(h, v, 2.2), p, i); img.set(q[0], q[1], P("gold", i < 0 ? 4 : 2)); }
+  const a = add2(add2(h, v, 2.2), p, 2.4), z = add2(h, v, -2.4);
+  for (let t = 0; t <= 1; t += 0.1) { const q = add2(lerp2(a, z, t), p, 1.6 * Math.sin(Math.PI * t)); img.set(q[0], q[1], P("gold", 3)); }
+  img.set(z[0], z[1], P("gold", 4)); img.set(z[0] + 1, z[1], P("gold", 2));
+}
+// main-gauche: a parrying dagger with long straight quillons and a side ring
+function maingaucheAt(img, h, v) {
+  const p = [-v[1], v[0]];
+  pole(img, add2(h, v, 2), add2(h, v, 10.5), P("steel", 4), P("steel", 2));
+  for (let i = -4.5; i <= 4.5; i += 0.5) { const q = add2(add2(h, v, 1.6), p, i); img.set(q[0], q[1], P("gold", i < 0 ? 4 : 2)); }
+  const r = add2(add2(h, v, 3), p, -1.8); img.set(r[0], r[1], P("gold", 3)); img.set(r[0] - 1, r[1], P("gold", 2));
+}
+function rogueHood(r) {
+  return (img, K) => {
+    const { hx, hy, f, d } = K;
+    ell(img, hx - 0.6, hy - 0.8, 6.1, 6.5, r, { clip: faceOpen(K, -2.4, 5.6), bias: 0.15 });
+    poly(img, [[hx - 2.5 * d, hy - 6.2], [hx - 7.6 * d, hy - 3.6], [hx - 8.4 * d, hy + 1.6], [hx - 5 * d, hy - 1]], (x) => P(r, (x - hx) * d < -6 ? 2 : 3));
+    lathe(img, hy + 4, hy + 8.5, hx - 0.3, pw([[hy + 4, 5.2], [hy + 8.5, 6.8]]), r, { bias: 0.1, clip: f ? (x, y) => !(x + 0.5 > hx - 0.5 && y + 0.5 < hy + 6.5) : null });
+    if (f) for (let y = Math.floor(hy - 2.4); y < hy + 5.6; y++) { const x = Math.floor(hx - 2.1); if (img.get(x, y)) img.set(x, y, P("leather", 3)); } // a leather edge round the face
+    hoodShade(img, K, -2.4, -1.9);
+  };
+}
+function mantletOf(r) {
+  return (img, K) => {
+    const { b, f } = K, y1 = 25.5 + b;
+    lathe(img, 17.5 + b, y1, K.tx, pw([[17.5 + b, 5.4], [20 + b, 8.2], [y1, 8.8]]), r, { bias: (f ? -0.1 : 0) + 0.1 });
+    rowTint(img, Math.round(y1 - 1), 10, 40, () => P(r, 2));
+    for (let x = 10; x <= 40; x++) if (x % 3 === 0) img.set(x, Math.round(y1 - 1), null); // dagged hem
+  };
+}
+Object.assign(GEAR.head, {
+  roguehood: { name: "Rogue's hood", draw: rogueHood("forest") },
+  roguehoodC: { name: "Rogue's hood (charcoal)", draw: rogueHood("ink") },
+  cavalier: { name: "Plumed cavalier hat", draw(img, K) {
+    const { hx, hy, d } = K;
+    ell(img, hx - 0.4, hy - 4.4, 5.2, 3.2, "ink", { clip: (x, y) => y + 0.5 < hy - 2.8, bias: 0.15 });
+    ell(img, hx - 0.2, hy - 2.8, 9.4, 2.2, "ink", { bias: -0.1 });
+    rowTint(img, Math.round(hy - 3.8), hx - 6, hx + 6, (x, v) => v.r === "ink" && P("crimson", x < hx ? 4 : 3));
+    // the plume: rooted at the back of the crown, swept back over the brim and drooping behind
+    const pts = [[-1.5, -6.6], [-4.5, -8.8], [-8, -9.2], [-10.6, -7.6], [-11.8, -4.8]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, ay] = pts[i], [bx, by] = pts[i + 1];
+      thick(img, hx + ax * d, hy + ay, hx + bx * d, hy + by, P("ivory", 4), P("ivory", 3));
+      thick(img, hx + ax * d, hy + ay + 1.2, hx + bx * d, hy + by + 1.2, P("ivory", 3), P("ivory", 2));
+    }
+    img.set(hx - 12 * d, hy - 3.4, P("crimson", 3)); img.set(hx - 1.2 * d, hy - 6.4, P("crimson", 4));
+  } },
+  deephood: { name: "Deep hood", draw(img, K) {
+    const { hx, hy, f, d } = K;
+    ell(img, hx - 0.8, hy - 1, 6.4, 6.8, "ink", { clip: faceOpen(K, -1.4, 5.6), bias: 0.2 });
+    poly(img, [[hx - 2 * d, hy - 7.2], [hx - 7.4 * d, hy - 4.6], [hx - 8.6 * d, hy + 1], [hx - 5.6 * d, hy - 1.6]], (x) => P("ink", (x - hx) * d < -6.5 ? 3 : 4));
+    lathe(img, hy + 4, hy + 9, hx - 0.3, pw([[hy + 4, 5.4], [hy + 9, 7.4]]), "ink", { bias: 0.15, clip: f ? (x, y) => !(x + 0.5 > hx - 0.5 && y + 0.5 < hy + 6.5) : null });
+    hoodShade(img, K, -1.4, -0.2);
+  } },
+});
+Object.assign(GEAR.shoulders, {
+  mantlet: { name: "Dagged mantlet", draw: mantletOf("forest") },
+  mantletC: { name: "Dagged mantlet (charcoal)", draw: mantletOf("ink") },
+});
+Object.assign(GEAR.chest, {
+  roguejerkin: { name: "Belted jerkin", draw(img, K) {
+    const { b, f, d } = K;
+    lathe(img, 18.5 + b, 42, K.tx, pw([[18.5 + b, 5.8], [21 + b, 7.1], [31 + b, 5.6], [36, 6.4], [42, 7.8]]), "leather", { bias: 0.05 });
+    for (let y = 20 + b; y <= 33 + b; y++) { const x = K.tx(y) + d * (-4.6 + (y - 20 - b) * 0.7); img.set(x, y, P("ink", 3)); img.set(x + 1, y, P("ink", 2)); }
+    rowTint(img, 33 + b, 15, 34, (x) => P("ink", x < 24 ? 3 : 2));
+    const c = K.tx(33 + b); img.set(c, 33 + b, P("gold", 4)); img.set(c + 1, 33 + b, P("gold", 2));
+    for (let y = 34 + b; y < 38 + b; y++) for (let x = c + 3 * d; Math.abs(x - c) <= 5.5; x += d) img.set(x, y, P("leather", y === 34 + b ? 4 : 2)); // pouch
+    for (const k of [0, -4, 4]) for (let y = 38; y < 42; y++) img.set(K.tx(y) + k, y, P("leather", 1)); // skirt slits
+    if (f) for (let y = 22 + b; y <= 30 + b; y += 2) img.set(K.tx(y) + 0.5, y, P("ivory", 3)); // lacing
+  } },
+  doublet: { name: "Slashed doublet", draw(img, K) {
+    const { b, f } = K;
+    lathe(img, 18.5 + b, 39, K.tx, pw([[18.5 + b, 5.6], [21 + b, 6.8], [31 + b, 5.2], [34 + b, 5.6], [39, 7.6]]), "crimson", { bias: 0.05 });
+    for (let y = 22 + b; y <= 30 + b; y++) for (const k of [-4, -2, 2, 4]) { const x = K.tx(y) + k; if ((y + k + 9) % 3 !== 0 && img.get(x, y)) img.set(x, y, P("ivory", k < 0 ? 4 : 3)); }
+    rowTint(img, 33 + b, 16, 33, (x) => P("leather", x < 24 ? 3 : 2));
+    if (f) for (let y = 21 + b; y <= 31 + b; y += 2) img.set(K.tx(y) + 0.5, y, P("gold", 4));
+    rowTint(img, 38, 14, 35, (x, v) => v.r === "crimson" && P("gold", x < 24 ? 3 : 2));
+    rowTint(img, 19 + b, 18, 31, (x, v) => v.r === "crimson" && P("ivory", 4));
+  } },
+  longcoat: { name: "Long leather coat", draw(img, K) {
+    const { b, f, d } = K;
+    const split = f ? (x, y) => !(y > 37 && Math.abs(x + 0.5 - K.tx(y) - 1.2 * d) < (y - 37) * 0.3) : null;
+    lathe(img, 18.5 + b, 53, K.tx, pw([[18.5 + b, 5.8], [21 + b, 7], [31 + b, 5.6], [36, 6.8], [53, 10.2]]), "leather", { bias: 0.12, clip: split });
+    for (let y = 18 + b; y <= 19 + b; y++) rowTint(img, y, 16, 33, (x, v) => v.r === "leather" && P("ink", 3)); // high collar
+    for (let y = 20 + b; y <= 33 + b; y++) { const x = K.tx(y) + d * (4.6 - (y - 20 - b) * 0.68); img.set(x, y, P("ink", 3)); img.set(x - d, y, P("ink", 2)); } // bandolier
+    for (const t of [0.25, 0.5, 0.75]) { const y = Math.round(20 + b + 13 * t), x = K.tx(y) + d * (4.6 - 13 * t * 0.68); img.set(x + d, y, P("steel", 4)); img.set(x + d, y - 1, P("leather", 4)); } // knife hilts
+    for (const y of [32 + b, 33 + b]) rowTint(img, y, 15, 34, (x) => P("crimson", x < 24 ? 3 : 2));
+    const c = K.tx(33 + b);
+    for (let y = 34 + b; y < 41 + b; y++) { img.set(c - 3.5 * d, y, P("crimson", 3)); img.set(c - 2.5 * d, y, P("crimson", 2)); } // sash tail
+    rowTint(img, 52, 8, 41, (x, v) => v.r === "leather" && P("leather", 1));
+    if (!f) for (let y = 38; y < 52; y++) img.set(K.tx(y), y, P("leather", 1)); // back vent
+  } },
+});
+Object.assign(GEAR.arms, {
+  puffsleeves: { name: "Puffed sleeves", draw(img, K) {
+    for (const [s, e, h, bias] of ARMS(K)) {
+      const v = dirOf(e, h);
+      capsule(img, s[0], s[1], e[0], e[1], 3.4, 2.6, "crimson", { bias });
+      const m = lerp2(s, e, 0.45); img.set(m[0] - 1, m[1], P("ivory", 4)); img.set(m[0] + 1, m[1] + 1, P("ivory", 3));
+      const z = add2(h, v, -1.8); capsule(img, e[0], e[1], z[0], z[1], 2.3, 2.2, "ink", { bias });
+      const c = add2(h, v, -1.4); ell(img, c[0], c[1], 2.5, 1.7, "ivory", { bias });
+    }
+  } },
+});
+Object.assign(GEAR.legs, {
+  breeches: { name: "Breeches & cavalier boots", draw(img, K) {
+    legEach(img, K, "ink", 3.2, 2.9, 2.5, { boot: "leather", bootFrom: 0.12, foot: "leather", footW: 3.4 });
+    for (const L of K.legs) { const q = lerp2(L.knee, L.ank, 0.1); ell(img, q[0], q[1], 3.8, 1.6, "leather", { bias: L.bias + 0.25 }); }
+  } },
+});
+Object.assign(GEAR.back, {
+  halfcape: { name: "Half cape", draw(img, K) {
+    const { b, f, d } = K, cx = (y) => (f ? K.bx(y) : K.tx(y)) + 4.2 * d + (y - 19 - b) * 0.08 * d;
+    lathe(img, 18.5 + b, 39, cx, pw([[18.5 + b, 3], [24 + b, 4.4], [39, 4.8]]), "ink", { bias: f ? -0.25 : 0.1 });
+    rowTint(img, 38, 8, 41, () => P("crimson", 3));
+    if (!f) for (let y = 26 + b; y < 38; y++) img.set(cx(y) - 1.5 * d, y, P("ink", 1)); // a fold
+  } },
+});
+Object.assign(GEAR.main, {
+  shortsword: { name: "Short sword", draw(img, K) { shortswordAt(img, K.main.h, K.mainDir); } },
+  rapier: { name: "Rapier", draw(img, K) { rapierAt(img, K.main.h, K.mainDir); } },
+});
+Object.assign(GEAR.off, {
+  maingauche: { name: "Main-gauche", draw(img, K) { maingaucheAt(img, K.off.h, K.offDir); } },
+});
 
 // classes: default body, the other body, and three tiers (the last is the class's showcase look)
 const CLASSES = {
