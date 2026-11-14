@@ -232,20 +232,20 @@
   },
   {
    "slot": "head",
-   "id": "cavalier",
-   "name": "Plumed cavalier hat",
+   "id": "roguehoodB",
+   "name": "Rogue's hood (brown)",
    "col": 9,
    "row": 1,
-   "sh": 0,
+   "sh": 16,
    "hem": 0
   },
   {
    "slot": "head",
-   "id": "deephood",
-   "name": "Deep hood",
+   "id": "cavalier",
+   "name": "Plumed cavalier hat",
    "col": 10,
    "row": 1,
-   "sh": 16,
+   "sh": 0,
    "hem": 0
   },
   {
@@ -1114,12 +1114,12 @@
    "body": "m",
    "tiers": [
     [
-     "Footpad",
-     "Rags",
+     "Cutpurse",
+     "Cloth",
      {
-      "head": "bandana",
+      "head": "roguehoodB",
       "chest": "darktunic",
-      "legs": "wraps",
+      "legs": "trousers",
       "main": "dagger"
      }
     ],
@@ -1127,26 +1127,24 @@
      "Rogue",
      "Leather",
      {
-      "head": "cowl",
-      "chest": "garb",
+      "head": "roguehoodC",
+      "chest": "roguejerkin",
       "arms": "bracers",
-      "legs": "wraps",
-      "back": "scarf",
+      "legs": "leggings",
       "main": "dagger",
       "off": "dagger"
      }
     ],
     [
-     "Shadow",
-     "Lamellar",
+     "Master thief",
+     "Belted leather",
      {
-      "head": "shadowmask",
-      "shoulders": "darkpads",
-      "chest": "lamellar",
+      "head": "roguehood",
+      "shoulders": "mantlet",
+      "chest": "roguejerkin",
       "arms": "bracers",
-      "legs": "wraps",
-      "back": "longscarf",
-      "main": "dagger",
+      "legs": "leggings",
+      "main": "shortsword",
       "off": "dagger"
      }
     ]

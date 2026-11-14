@@ -1151,7 +1151,7 @@ const ORDER = {
   back: ["main", "off", "limbs", "arms", "base", "legs", "chest", "back", "hair", "shoulders", "head"],
 };
 
-// ---------- rogue look proposals (A classic rogue, B renaissance duelist, C guild assassin) ----------
+// ---------- the classic rogue (the thief's look), the renaissance duelist set, the long coat ----------
 const inHead = (K, x, y) => ((x + 0.5 - (K.hx - 0.6)) / 6.2) ** 2 + ((y + 0.5 - (K.hy - 0.4)) / 6.6) ** 2 < 1;
 // the shade a hood casts over the brow (and, deep, the eyes): drawn on the hood's own layer, over the face
 function hoodShade(img, K, y0, y1) {
@@ -1202,6 +1202,7 @@ function mantletOf(r) {
 Object.assign(GEAR.head, {
   roguehood: { name: "Rogue's hood", draw: rogueHood("forest") },
   roguehoodC: { name: "Rogue's hood (charcoal)", draw: rogueHood("ink") },
+  roguehoodB: { name: "Rogue's hood (brown)", draw: rogueHood("leather") },
   cavalier: { name: "Plumed cavalier hat", draw(img, K) {
     const { hx, hy, d } = K;
     ell(img, hx - 0.4, hy - 4.4, 5.2, 3.2, "ink", { clip: (x, y) => y + 0.5 < hy - 2.8, bias: 0.15 });
@@ -1215,13 +1216,6 @@ Object.assign(GEAR.head, {
       thick(img, hx + ax * d, hy + ay + 1.2, hx + bx * d, hy + by + 1.2, P("ivory", 3), P("ivory", 2));
     }
     img.set(hx - 12 * d, hy - 3.4, P("crimson", 3)); img.set(hx - 1.2 * d, hy - 6.4, P("crimson", 4));
-  } },
-  deephood: { name: "Deep hood", draw(img, K) {
-    const { hx, hy, f, d } = K;
-    ell(img, hx - 0.8, hy - 1, 6.4, 6.8, "ink", { clip: faceOpen(K, -1.4, 5.6), bias: 0.2 });
-    poly(img, [[hx - 2 * d, hy - 7.2], [hx - 7.4 * d, hy - 4.6], [hx - 8.6 * d, hy + 1], [hx - 5.6 * d, hy - 1.6]], (x) => P("ink", (x - hx) * d < -6.5 ? 3 : 4));
-    lathe(img, hy + 4, hy + 9, hx - 0.3, pw([[hy + 4, 5.4], [hy + 9, 7.4]]), "ink", { bias: 0.15, clip: f ? (x, y) => !(x + 0.5 > hx - 0.5 && y + 0.5 < hy + 6.5) : null });
-    hoodShade(img, K, -1.4, -0.2);
   } },
 });
 Object.assign(GEAR.shoulders, {
@@ -1310,9 +1304,9 @@ const CLASSES = {
     ["Ranger", "Leather", { head: "hood", chest: "jerkin", arms: "bracers", legs: "leggings", back: "quiver", off: "bow" }],
     ["Warden", "Brigandine", { head: "falconhelm", shoulders: "leatherpads", chest: "brigandine", arms: "bracers", legs: "leggings", back: "wardencloak", off: "greatbow" }]] },
   thief: { name: "Thief", role: "Infiltrator", shape: "/", body: { type: "m", hair: "hair" }, alt: { type: "f", hair: "ink" }, tiers: [
-    ["Footpad", "Rags", { head: "bandana", chest: "darktunic", legs: "wraps", main: "dagger" }],
-    ["Rogue", "Leather", { head: "cowl", chest: "garb", arms: "bracers", legs: "wraps", back: "scarf", main: "dagger", off: "dagger" }],
-    ["Shadow", "Lamellar", { head: "shadowmask", shoulders: "darkpads", chest: "lamellar", arms: "bracers", legs: "wraps", back: "longscarf", main: "dagger", off: "dagger" }]] },
+    ["Cutpurse", "Cloth", { head: "roguehoodB", chest: "darktunic", legs: "trousers", main: "dagger" }],
+    ["Rogue", "Leather", { head: "roguehoodC", chest: "roguejerkin", arms: "bracers", legs: "leggings", main: "dagger", off: "dagger" }],
+    ["Master thief", "Belted leather", { head: "roguehood", shoulders: "mantlet", chest: "roguejerkin", arms: "bracers", legs: "leggings", main: "shortsword", off: "dagger" }]] },
   cleric: { name: "Cleric", role: "Healer", shape: "A", body: { type: "f", hair: "hair" }, alt: { type: "m", hair: "hair" }, tiers: [
     ["Acolyte", "Habit", { chest: "habit", arms: "woolsleeves", off: "tome" }],
     ["Priest", "Vestment", { head: "veil", shoulders: "mantle", chest: "vestment", arms: "sleeves", main: "mace", off: "tome" }],
@@ -1326,6 +1320,8 @@ for (const k of Object.values(CLASSES)) k.loadout = k.tiers[2][2];
 // weapon variants shown on the stance and attack sheets
 const KNIGHT_GS = { ...CLASSES.knight.loadout, main: "greatsword", off: undefined };
 const LANCER_PH = { ...CLASSES.lancer.loadout, main: "shortspear", off: "shield" };
+// special equipment set, kept for a specialist or a set bonus later: the renaissance duelist (rapier and main-gauche)
+const DUELIST = { head: "cavalier", chest: "doublet", arms: "puffsleeves", legs: "breeches", back: "halfcape", main: "rapier", off: "maingauche" };
 // enchanted pilot loadouts: [key, name, loadout, body] — each wears one item with a live gear effect
 const ENCHANTED = [
   ["flame-sword", "Flame sword", { ...CLASSES.knight.loadout, main: "flamesword" }, CLASSES.knight.body],
@@ -1742,4 +1738,4 @@ function frame(style) {
 }
 
 setStyle("muted");
-export { REACTIONS, reactPose, TEAM_SCHEMES, SCHEME_RAMPS, recolor, ENCHANTED, FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
+export { DUELIST, REACTIONS, reactPose, TEAM_SCHEMES, SCHEME_RAMPS, recolor, ENCHANTED, FACINGS, FACING_DIR, FACING_VIEW, drawUnit, turn, facingToward, attackSide, setStyle, STYLE, RAMPS_CLASSIC, RAMPS_MUTED, ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CLASSES, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, KNIGHT_GS, L, LANCER_PH, Layer, MARK, MD, ORDER, OY0, P, POSES, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bodyOf, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, makeSprite, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile };
