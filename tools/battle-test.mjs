@@ -15,10 +15,26 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
   assert.equal(B.preview(b, a, d).side, "front");
   d.facing = "SE"; assert.equal(B.preview(b, a, d).side, "side");
   d.facing = "SW"; const back = B.preview(b, a, d);
-  assert.equal(back.side, "back"); assert.equal(back.dmg, Math.round(a.atk * 1.5));
+  assert.equal(back.side, "back"); assert.equal(back.dmg, B.mitigate(a.atk * 1.5, d.def), "the shield does not count from the back");
   B.strike(b, a, d);
   assert.equal(a.facing, "SW", "the attacker turns to the target");
   assert.equal(d.hp, d.maxHp - back.dmg);
+}
+// defence: damage = max(1, round(raw x 20 / (20 + D))); shields count fully from the front, half from the side, not from the back
+{
+  assert.equal(B.mitigate(12, 12), 8); assert.equal(B.mitigate(18, 12), 11); assert.equal(B.mitigate(10, 0), 10); assert.equal(B.mitigate(2, 500), 1);
+  const b = B.newBattle(roster([["a", "player", "thief", "A", [5, 5]], ["d", "enemy", "knight", "D", [5, 6]]]));
+  const [a, d] = b.units; // a plate knight with a kite shield: DEF 14, shield 3
+  assert.deepEqual([d.def, d.block, d.res], [14, 3, 1]);
+  d.facing = "NE"; assert.equal(B.preview(b, a, d).def, 17);
+  d.facing = "SE"; assert.equal(B.preview(b, a, d).def, 15.5);
+  d.facing = "SW"; assert.equal(B.preview(b, a, d).def, 14);
+  // magic goes by resist, not armour or shield
+  const m = B.newBattle(roster([["m", "player", "mage", "M", [5, 2]], ["k", "enemy", "knight", "K", [5, 5]], ["c", "enemy", "cleric", "C", [5, 6]]]));
+  const [mg, kn, cl] = m.units, fb = B.skillPreview(m, mg, "fireball", kn.tile);
+  const ek = fb.effects.find((e) => e.unit === kn), ec = fb.effects.find((e) => e.unit === cl);
+  assert.ok(ek.magic); assert.equal(ek.def, kn.res); assert.equal(ec.def, cl.res);
+  assert.ok(ek.amount > ec.amount, "plate does not stop fire; a high-resist robe does");
 }
 // movement: no water, no props, no enemies in the way, no step higher than JUMP
 {
@@ -96,26 +112,35 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
 }
 // characters: stats and skills come from the archetype; the look is separate; a battle does not change the character
 {
-  const OLD = { knight: [42, 10, 3, [1, 1], 0], lancer: [36, 11, 4, [1, 2], 0], thief: [28, 9, 5, [1, 1], 0], archer: [26, 9, 4, [2, 4], 0], mage: [22, 12, 3, [2, 3], 20], cleric: [30, 7, 3, [1, 1], 18] };
-  for (const [k, [hp, atk, move, range, mp]] of Object.entries(OLD)) {
-    const c = makeCharacter({ id: k, name: k, archetype: k, look: presetLook(k) });
-    assert.deepEqual([c.stats.hp, c.stats.atk, c.stats.move, c.stats.range, c.stats.mp], [hp, atk, move, range, mp], `${k} keeps its stats`);
+  // the demo party's totals: archetype base plus equipment
+  const WANT = { knight: [42, 10, 14, 1, 3, 0, [1, 1]], lancer: [36, 11, 14, 3, 0, 0, [1, 2]], thief: [28, 9, 6, 1, 0, 0, [1, 1]],
+    archer: [26, 9, 9, 1, 0, 0, [2, 5]], mage: [22, 12, 0, 10, 0, 21, [2, 3]], cleric: [30, 7, 0, 11, 0, 18, [1, 1]] };
+  for (const [k, w] of Object.entries(WANT)) {
+    const st = makeCharacter({ id: k, name: k, archetype: k, look: presetLook(k) }).stats;
+    assert.deepEqual([st.hp, st.atk, st.def, st.res, st.block, st.mp, st.range], w, `${k} totals`);
   }
   assert.equal(Object.keys(ARCHETYPES).length, 6);
   assert.throws(() => makeCharacter({ id: "x", archetype: "bard", look: presetLook("knight") }), /archetype/);
   assert.throws(() => makeCharacter({ id: "x", archetype: "knight" }), /look/);
-  // a knight in a mage's robe: knight stats and skills, mage look
+  // a knight in a mage's robe and staff: knight base, the robe's stats, the staff's bolt, no skills
   const def = { id: "odd", name: "Odd", archetype: "knight", look: presetLook("mage") }, c = makeCharacter(def);
-  assert.equal(c.stats.hp, 42); assert.deepEqual(c.skills, []); assert.equal(c.look.loadout.chest, "robe");
+  assert.deepEqual([c.stats.hp, c.stats.atk, c.stats.def, c.stats.res, c.stats.range, c.projectile], [38, 9, 0, 10, [2, 3], "spell"]);
+  assert.deepEqual(c.skills, []); assert.equal(c.look.loadout.chest, "robe");
   const b = B.newBattle([{ character: c, team: "player", tile: [5, 5] }, ...roster([["e", "enemy", "mage", "E", [5, 7]]])]);
   const [u, e] = b.units;
   assert.equal(u.character, c); assert.equal(u.lo.main, "staff"); assert.equal(u.facing, "NE");
   B.strike(b, e, u); // the mage hits the knight
-  assert.ok(u.hp < u.maxHp); assert.equal(c.stats.hp, 42, "the character keeps its stats after the battle");
+  assert.ok(u.hp < u.maxHp); assert.equal(c.stats.hp, 38, "the character keeps its stats after the battle");
   u.lo.main = "sword"; assert.equal(c.look.loadout.main, "staff", "a unit's gear is a copy");
   // the demo roster: six against six, same archetypes on both sides, different looks
   const d = B.newBattle(), arch = (t) => d.units.filter((x) => x.team === t).map((x) => x.archetype).sort();
   assert.deepEqual(arch("player"), arch("enemy"));
   assert.ok(d.units.filter((x) => x.team === "enemy").every((x) => x.gear !== d.units.find((p) => p.team === "player" && p.archetype === x.archetype).gear));
+}
+// every gear piece is an item, and every item is a gear piece
+{
+  const { GEAR } = await import("../docs/lib/pixelrpg.js"), { ITEMS } = await import("../docs/lib/items.js");
+  for (const [slot, pieces] of Object.entries(GEAR)) for (const id of Object.keys(pieces)) assert.ok(ITEMS[slot]?.[id], `no item entry for ${slot}.${id}`);
+  for (const [slot, items] of Object.entries(ITEMS)) for (const id of Object.keys(items)) assert.ok(GEAR[slot]?.[id], `item ${slot}.${id} has no art`);
 }
 console.log("battle rules ok");

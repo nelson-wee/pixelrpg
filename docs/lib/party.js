@@ -1,7 +1,8 @@
 // The party: the player's characters between battles. Pre-battle, each character's gear can change
 // (later, its build too). Pure data and logic, no DOM: the page passes in the saved text and stores what
 // serializeParty() returns.
-import { GEAR, TWO_HANDED } from "./pixelrpg.js";
+import { GEAR } from "./pixelrpg.js";
+import { clears, worn } from "./items.js";
 import { LOOKS } from "./presets.js";
 import { ARCHETYPES } from "./character.js";
 import { DEMO_PARTY } from "./battle.js";
@@ -22,12 +23,11 @@ const withLook = (def, loadout, body = def.look.body) => {
   const lo = Object.fromEntries(KEYS.filter((k) => loadout[k]).map((k) => [k, loadout[k]]));
   return { ...def, look: { name: lookName(lo), loadout: lo, body: { ...body } } };
 };
-/** Put one piece in a slot (or clear it with null). A two-handed weapon empties the off hand, and an off-hand
- *  piece takes the place of a two-handed weapon. Returns a new definition. */
+/** Put one piece in a slot (or clear it with null). A piece that needs both hands (a two-handed weapon, a bow)
+ *  empties the other hand, and a piece for a hand that a two-handed item holds takes its place. Returns a new definition. */
 export function equip(def, slot, id) {
-  const lo = { ...def.look.loadout, [slot]: id || null };
-  if (slot === "main" && TWO_HANDED.includes(id)) lo.off = null;
-  if (slot === "off" && id && TWO_HANDED.includes(def.look.loadout.main)) lo.main = null;
+  const lo = { ...def.look.loadout, [slot]: id || null }, other = clears(slot, id, def.look.loadout);
+  if (other) lo[other] = null;
   return withLook(def, lo);
 }
 /** Wear a preset's gear. The character keeps its own body. */
@@ -40,7 +40,7 @@ export function cleanDef(d, fallback) {
   if (!d || typeof d !== "object" || !ARCHETYPES[d.archetype] || d.archetype !== fallback.archetype) return null;
   const lo = {};
   for (const k of KEYS) { const id = d.look?.loadout?.[k]; if (typeof id === "string" && GEAR[k]?.[id]) lo[k] = id; }
-  if (lo.off && TWO_HANDED.includes(lo.main)) delete lo.off;
+  const kept = worn(lo); for (const k of ["main", "off"]) if (!kept[k]) delete lo[k];
   const b = d.look?.body ?? {};
   const body = { type: b.type === "f" ? "f" : "m", hair: HAIRS.some(([h]) => h === b.hair) ? b.hair : fallback.look.body.hair, ...(b.beard ? { beard: true } : {}) };
   return withLook({ id: fallback.id, name: fallback.name, archetype: fallback.archetype, talents: [] }, lo, body);

@@ -33,23 +33,27 @@ python3 -m http.server --directory docs 8000
 
 `docs/battle.html` is a small playable battle on the demo map: six player units against six enemy units. The enemies use the same six classes as the player, with the middle gear tier and the other body type. There are no monsters.
 
-- **Stats:** each unit has health and attack. Casters also have MP. Move and range come from the class.
+- **Stats:** health, MP, attack, armour, resist, shield and move. The archetype gives the base (health, attack, move, MP and skills). The equipment adds the rest: every worn piece gives its look and its stats together, with no separate cosmetics (`docs/lib/items.js`). The weapon sets the basic attack: its range, straight-line reach and projectile. A bow in the off hand comes first, then the main-hand weapon, then bare hands (range 1). Two-handed weapons and bows need both hands.
+- **Defence:** damage = max(1, round(raw × 20 ÷ (20 + D))), where raw = attack × side. D is armour plus the shield's value, which counts fully from the front, half from the side and not at all from the back. Each point of D adds the same effective health (health × (1 + D ÷ 20)), and damage never reaches 0. Magic (Fireball) uses resist instead of armour and shields. Resists for each element (fire and others) will later replace the one generic resist.
+- **Item stats by material:** cloth gives resist and MP; leather 1–2 armour a piece; chain 2–3; plate 3–4 (the chest the most). Kite shield 3 and buckler 1 (shield values); the main-gauche 1. Weapon attack bonuses: dagger 0 (+1 in the off hand), short sword 1, sword, rapier and mace 2, greatsword 5, spears 2–4 with reach 1–2, bows 1–3 with range 2–3, 2–4 or 2–5, staff and rod a magic bolt with range 2–3.
 - **Skills:** a second kind of action. A skill uses MP and takes the unit's action for the turn, like an attack. MP does not come back during the battle. **Heal** (cleric, 6 MP, range 0–3) gives one ally up to 14 HP, and the caster can heal itself. **Fireball** (mage, 8 MP, range 2–4) hits the target tile and its 4 grid neighbours (no diagonals) for 10 damage × side, seen from the caster's tile. It also hits the caster's own units. The preview lists every unit that the skill touches. The effects come from pixelfx (`holy/heal` on the target's own sprite mask, `explosions/plasma-explosion` in the fire ramp) and load from `docs/pixelfx`. Without those files, simple pixel sparks stand in. Skills are data in `SKILLS` in `docs/lib/battle.js`.
-- **Facing:** damage = attack × side. An attack from the front does ×1, from the side ×1.25 and from the back ×1.5. The side comes from `attackSide` and the defender's facing. A unit turns to its target when it attacks and faces its last step when it moves. A unit that is hit does not turn. At the end of each action, the player selects the unit's facing; the map shows its front, side and back tiles.
+- **Facing:** raw damage = attack × side. An attack from the front does ×1, from the side ×1.25 and from the back ×1.5. The side comes from `attackSide` and the defender's facing. A unit turns to its target when it attacks and faces its last step when it moves. A unit that is hit does not turn. At the end of each action, the player selects the unit's facing; the map shows its front, side and back tiles.
 - **Turns:** a player phase, then an enemy phase. In a phase, each unit can move once and act once (attack or skill).
 - **Map:** water and props block movement, and one step can go up or down 2 height levels at most.
 - **Controls:** every step has a button, so the game plays on a phone. Select a unit (or use Next unit), then a command: Move, Attack, Skills, Wait, or Cancel / Undo move. Skills opens a list with the MP cost of each skill. Heal selects the most hurt ally first (Previous and Next change it). Fireball aims at the best tile first; the direction pad, Previous foe and Next foe move the aim, and orange tiles show the area. Move shows a direction pad for the cursor and a Move here button. Attack selects the best target first; Previous and Next change the target, and the preview shows the damage before you attack. At the end, a direction pad selects the facing (NW, NE, SW, SE), then Done. Taps on the map, a mouse and the keyboard (arrow keys, Enter, Escape) are shortcuts for the same steps.
 - **Team colours:** the enemy side wears a team colour scheme, so the two sides read apart. Select it on the page: Crimson (the default), Ebony, Verdant, or the gear's own colours.
 - **Enemy AI:** it tries every tile it can reach and takes the attack or skill with the best score. Damage and kills count for an attack. A heal counts the health it restores when an ally lost 6 or more. A fireball counts the damage to foes and pays double for damage to its own side. A kill counts most, so it looks for side and back attacks. With no target in reach, it walks toward the nearest foe. At the end, it faces the nearest foe.
 
-| Class | Health | MP | Attack | Move | Range | Skills |
-|---|---|---|---|---|---|---|
-| Knight | 42 | – | 10 | 3 | 1 | – |
-| Lancer | 36 | – | 11 | 4 | 1–2, straight line | – |
-| Thief | 28 | – | 9 | 5 | 1 | – |
-| Archer | 26 | – | 9 | 4 | 2–4 | – |
-| Mage | 22 | 20 | 12 | 3 | 2–3 | Fireball |
-| Cleric | 30 | 18 | 7 | 3 | 1 | Heal |
+The demo party, base plus equipment (top-tier look):
+
+| Archetype | Base health / attack / move / MP | With its gear: health, attack, armour, shield, resist, MP | Attack | Skills |
+|---|---|---|---|---|
+| Knight | 38 / 8 / 3 / – | 42, 10, 14, 3, 1, – | sword, range 1 | – |
+| Lancer | 36 / 7 / 4 / – | 36, 11, 14, –, 3, – | dragon lance, reach 1–2 | – |
+| Thief | 28 / 7 / 5 / – | 28, 9, 6, –, 1, – | short sword and dagger, range 1 | – |
+| Archer | 26 / 6 / 4 / – | 26, 9, 9, –, 1, – | greatbow, range 2–5 | – |
+| Mage | 22 / 11 / 3 / 10 | 22, 12, 0, –, 10, 21 | staff bolt, range 2–3 | Fireball |
+| Cleric | 30 / 6 / 3 / 9 | 30, 7, 0, –, 11, 18 | sceptre, range 1 | Heal |
 
 **Party screen.** The battle page opens on "Prepare your party". Select a character, then change its gear by slot or with a look preset, and its body, hair and beard. The preview shows the idle and attack animation, the stance that the weapon sets, and the stats and skills from the archetype. The party is saved in the browser; Reset party gives the demo party again. Start battle uses the party; Change gear (in the battle bar and after a battle) goes back to this screen. The rules are in `docs/lib/party.js` (`equip`, `wearPreset`, `setBody`, `parseParty`, with no DOM), and the screen is `docs/muster.js`.
 
@@ -81,7 +85,8 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | `tools/art.mjs` | The generator: writes every sheet in `sprites/art`, the battle map and the combat clips |
 | `docs/index.html`, `docs/app.js` | The web viewer (Wardrobe) |
 | `docs/lib/presets.js` | Look presets: the named gear sets and bodies of each archetype in three tiers, the weapon variants and the enchanted pilot loadouts. Looks only, no stats |
-| `docs/lib/character.js` | Characters: archetypes (base stats, skills, projectile) and `makeCharacter`, which turns a character definition into a character with derived stats. No DOM |
+| `docs/lib/items.js` | Items: the stats of every gear piece, the weapons' basic attacks, the both-hands rule |
+| `docs/lib/character.js` | Characters: archetypes (base stats, skills) and `makeCharacter`, which adds the equipment and turns a character definition into a character with derived stats. No DOM |
 | `docs/lib/party.js` | The party between battles: gear changes (two-handed rules), look names, and safe save and load. No DOM |
 | `docs/lib/gearlist.js` | Chip labels for every gear piece, hair colours and stance names, shared by the Wardrobe and the party screen |
 | `docs/muster.js` | The party screen on the battle page |

@@ -92,6 +92,8 @@ ol.log li:first-child { color: var(--strong); }
 .toggles { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; }
 .mpresets { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px 18px; }
 .mpresets .row .cls { width: 56px; font-family: 'Pixelify Sans', sans-serif; font-size: 16px; color: var(--strong); }
+.chip .it { display: block; font-family: 'Silkscreen', monospace; font-size: 10px; letter-spacing: 0.5px; color: var(--dim); }
+.chip[aria-pressed="true"] .it { color: var(--ink); }
 .mslot { display: flex; gap: 12px; align-items: flex-start; }
 .mslot .label { width: 92px; flex: 0 0 92px; padding-top: 14px; }
 @media (max-width: 640px) { .mslot { flex-direction: column; gap: 4px; } .mslot .label { padding-top: 0; } .mroster { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -175,7 +177,8 @@ footer { max-width: 1500px; margin: 0 auto; padding: 0 24px 40px; color: var(--d
     <div class="card">
       <div class="label">RULES</div>
       <ul class="rules">
-        <li><b>Damage</b> = attack × side. <b>Front</b> ×1, <b>side</b> ×1.25, <b>back</b> ×1.5.</li>
+        <li><b>Damage</b> = attack × side (<b>front</b> ×1, <b>side</b> ×1.25, <b>back</b> ×1.5), then lowered by defence: × 20 ÷ (20 + defence), at least 1.</li>
+        <li><b>Defence</b> = armour, plus the shield: fully from the front, half from the side, none from the back. <b>Magic</b> uses resist instead. Gear gives armour, resist, shields and the attack's range.</li>
         <li>A unit turns to its target when it attacks. When it moves, it faces the direction of its last step. A unit that is hit does not turn.</li>
         <li>Each turn, every unit can move once and act once: attack, or use a skill. Then it selects a facing.</li>
         <li><b>Skills</b> use MP, which does not come back during the battle. <b>Heal</b> (cleric, 6 MP) gives one ally up to 14 HP. <b>Fireball</b> (mage, 8 MP) does 10 damage × side to every unit on the target tile and the 4 tiles next to it, your own units too.</li>

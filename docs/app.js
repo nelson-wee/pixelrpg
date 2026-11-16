@@ -3,6 +3,7 @@ import { TWO_HANDED, STANCES, STYLE, setStyle, stanceOf, dress, layerImg, setCel
 import { GearFx, fxPieces, over, place } from "./lib/gearfx.js";
 import { LOOKS, KNIGHT_GS, LANCER_PH, DUELIST, ENCHANTED } from "./lib/presets.js";
 import { SLOTS, HAIRS, STANCE_NAMES } from "./lib/gearlist.js";
+import { clears } from "./lib/items.js";
 const KEYS = SLOTS.map(([k]) => k);
 
 // attack frame timing in ms: ready, wind-up, strike, follow-through
@@ -107,8 +108,7 @@ function chip(label, pressed, onClick) {
 }
 function pick(slot, id) {
   const n = { ...state.lo, [slot]: id || null };
-  if (slot === "main" && TWO_HANDED.includes(id)) n.off = null;          // two-handed: both hands on the weapon
-  if (slot === "off" && id && TWO_HANDED.includes(state.lo.main)) n.main = null;
+  const other = clears(slot, id, state.lo); if (other) n[other] = null; // two-handed weapons and bows need both hands
   state.lo = n; render();
 }
 function render() {

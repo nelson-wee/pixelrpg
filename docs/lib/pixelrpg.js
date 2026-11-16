@@ -307,7 +307,7 @@ function stanceOf(lo = {}) {
   if (lo.main === "shortspear") return "phalanx";
   if (BOWS.includes(lo.off)) return "archer";
   if (SPEARS.includes(lo.main)) return "lancer";
-  if (RODS.includes(lo.main) || lo.off === "tome") return "caster";
+  if (RODS.includes(lo.main) || (lo.off === "tome" && !lo.main)) return "caster"; // a book with a weapon fights in guard
   if (["dagger", "offsword", "offmace", "shadowdagger", "maingauche"].includes(lo.off) || lo.main === "dagger" || lo.main === "shadowdagger") return "rogue";
   return "guard";
 }
