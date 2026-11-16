@@ -35,10 +35,20 @@ export const PROPS = { "1,10": "oak", "9,6": "oak", "10,1": "pine", "1,4": "bann
 // area "plus": the target tile and its four grid neighbours (no diagonals). friendly: the area also hits allies.
 export const SKILLS = {
   heal: { name: "Heal", mp: 6, range: [0, 3], target: "ally", heal: 14 },
-  fireball: { name: "Fireball", mp: 8, range: [2, 4], target: "tile", area: "plus", power: 10, friendly: true },
+  fireball: { name: "Fireball", mp: 8, range: [2, 4], target: "tile", area: "plus", power: 10, friendly: true, magic: true, element: "fire" },
 };
 export const JUMP = 2;                                   // the largest height change for one step
 export const SIDE_MULT = { front: 1, side: 1.25, back: 1.5 };
+// Defence: damage = max(1, round(raw x K / (K + D))). Each point of D adds the same effective health (HP x (1 + D/K)),
+// it never reaches zero damage, and stacking stays safe. raw = attack (or skill power) x the side multiplier.
+// D is armour plus the shield's block, which counts fully from the front, half from the side and not from the back.
+// Magic uses resist instead of armour and shields.
+export const DEF_K = 20;
+export const SHIELD_SIDE = { front: 1, side: 0.5, back: 0 };
+export const mitigate = (raw, d) => Math.max(1, Math.round((raw * DEF_K) / (DEF_K + Math.max(0, d))));
+export const defenceOf = (t, side) => t.def + t.block * SHIELD_SIDE[side];
+// earmarked: resistances per element (fire, frost, storm, holy, shadow) will replace the one generic resist
+export const resistOf = (t, element) => t.res;
 export const RANGED = (u) => u.range[1] > 1 && !u.line; // archers and mages shoot; the lancer's reach is melee
 
 // The demo teams, as character definitions. Your party wears each archetype's top-tier look with the default
@@ -69,7 +79,7 @@ export function placeUnit({ character, team, tile, facing }) {
     id: c.id, team, name: c.name, archetype: c.archetype, className: c.className, character: c,
     lo: { ...c.look.loadout }, body: { ...c.look.body }, gear: c.look.name, projectile: c.projectile,
     tile: [...tile], facing: facing ?? START_FACING[team],
-    hp: st.hp, maxHp: st.hp, atk: st.atk, move: st.move, range: [...st.range], line: st.line,
+    hp: st.hp, maxHp: st.hp, atk: st.atk, def: st.def, res: st.res, block: st.block, move: st.move, range: [...st.range], line: st.line,
     mp: st.mp, maxMp: st.mp, skills: [...c.skills],
     alive: true, moved: false, acted: false, done: false,
   };
@@ -138,8 +148,8 @@ export const targets = (b, u, from = u.tile) => foesOf(b, u).filter((f) => inRan
 
 // what an attack would do: the side it lands on (from the defender's facing), the multiplier and the damage
 export function preview(b, u, t, from = u.tile) {
-  const side = attackSide(t.tile, t.facing, from), mult = SIDE_MULT[side], dmg = Math.round(u.atk * mult);
-  return { side, mult, dmg, hp: t.hp, after: Math.max(0, t.hp - dmg), kills: dmg >= t.hp };
+  const side = attackSide(t.tile, t.facing, from), mult = SIDE_MULT[side], raw = u.atk * mult, def = defenceOf(t, side), dmg = mitigate(raw, def);
+  return { side, mult, raw, def, dmg, hp: t.hp, after: Math.max(0, t.hp - dmg), kills: dmg >= t.hp };
 }
 
 // ---------- skills ----------
@@ -170,8 +180,9 @@ export function skillPreview(b, u, id, tile, from = u.tile) {
     for (const t of areaOf(id, tile)) {
       const a = unitAt(b, t);
       if (!a || (a.team === u.team && !s.friendly)) continue;
-      const side = attackSide(a.tile, a.facing, from), mult = SIDE_MULT[side], amount = Math.round(s.power * mult);
-      effects.push({ unit: a, kind: "damage", side, mult, amount, hp: a.hp, after: Math.max(0, a.hp - amount), kills: amount >= a.hp, ally: a.team === u.team });
+      const side = attackSide(a.tile, a.facing, from), mult = SIDE_MULT[side], raw = s.power * mult;
+      const def = s.magic ? resistOf(a, s.element) : defenceOf(a, side), amount = mitigate(raw, def);
+      effects.push({ unit: a, kind: "damage", side, mult, raw, def, magic: !!s.magic, amount, hp: a.hp, after: Math.max(0, a.hp - amount), kills: amount >= a.hp, ally: a.team === u.team });
     }
   }
   return { id, name: s.name, mp: s.mp, tile, effects };

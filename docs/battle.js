@@ -536,7 +536,7 @@ function unitCard(u) {
   const v = vis.get(u.id), status = !u.alive ? "DOWN" : u.done ? "DONE THIS TURN" : u.team === b.phase ? "READY" : "WAITING";
   info.innerHTML = `<div class="uname"></div><div class="team ${u.team}"></div>
     <div class="hp ${u.team}" role="img" aria-label="Health ${v.hp} of ${u.maxHp}"><i style="width:${(100 * v.hp) / u.maxHp}%"></i></div>
-    <div class="stats"><span>HEALTH</span><b>${v.hp} / ${u.maxHp}</b>${u.maxMp ? `<span>MP</span><b>${u.mp} / ${u.maxMp}</b>` : ""}<span>ATTACK</span><b>${u.atk}</b><span>MOVE</span><b>${u.move}</b><span>RANGE</span><b>${rangeText(u)}</b>${u.skills.length ? `<span>SKILLS</span><b>${u.skills.map((id) => `${B.SKILLS[id].name} (${B.SKILLS[id].mp} MP)`).join(", ")}</b>` : ""}<span>FACING</span><b>${v.facing ?? u.facing}</b><span>STATUS</span><b>${status}</b></div>`;
+    <div class="stats"><span>HEALTH</span><b>${v.hp} / ${u.maxHp}</b>${u.maxMp ? `<span>MP</span><b>${u.mp} / ${u.maxMp}</b>` : ""}<span>ATTACK</span><b>${u.atk}</b><span>ARMOUR</span><b>${u.def}${u.block ? ` + shield ${u.block}` : ""}</b><span>RESIST</span><b>${u.res}</b><span>MOVE</span><b>${u.move}</b><span>RANGE</span><b>${rangeText(u)}</b>${u.skills.length ? `<span>SKILLS</span><b>${u.skills.map((id) => `${B.SKILLS[id].name} (${B.SKILLS[id].mp} MP)`).join(", ")}</b>` : ""}<span>FACING</span><b>${v.facing ?? u.facing}</b><span>STATUS</span><b>${status}</b></div>`;
   info.querySelector(".uname").textContent = u.name;
   info.querySelector(".team").textContent = `${u.className.toUpperCase()} · ${u.gear.toUpperCase()} · ${u.team === "player" ? "YOUR TEAM" : "ENEMY"}`;
   box.replaceChildren(c, info);
@@ -552,6 +552,7 @@ function previewCard() {
   const p = B.preview(b, sel, t);
   $("preview").innerHTML = `<div class="big">${p.dmg} damage</div>
     <div>${sel.name} → <b class="tn"></b>, from the <b class="side-${p.side}">${p.side.toUpperCase()}</b> (×${p.mult})</div>
+    <div>Attack ${sel.atk} × ${p.mult} = ${+p.raw.toFixed(2)}, lowered by defence ${p.def}${t.block ? ` (armour ${t.def} + shield ${+(p.def - t.def).toFixed(1)})` : ""}</div>
     <div>Health ${p.hp} → ${p.after}${p.kills ? " · <b class='side-back'>DEFEATS THE UNIT</b>" : ""}</div>`;
   $("preview").querySelector(".tn").textContent = t.name;
 }
@@ -565,7 +566,7 @@ function skillCard() {
   for (const e of p.effects) {
     const d = document.createElement("div");
     d.innerHTML = e.kind === "heal" ? `<b class="nm"></b>: <b style="color:#a4e08a">+${e.amount} HP</b> · ${e.hp} → ${e.after}`
-      : `<b class="nm"></b>${e.ally ? " <b class='side-back'>(YOUR UNIT)</b>" : ""}: ${e.amount} damage, <b class="side-${e.side}">${e.side.toUpperCase()}</b> · ${e.hp} → ${e.after}${e.kills ? " · <b class='side-back'>DOWN</b>" : ""}`;
+      : `<b class="nm"></b>${e.ally ? " <b class='side-back'>(YOUR UNIT)</b>" : ""}: ${e.amount} damage, <b class="side-${e.side}">${e.side.toUpperCase()}</b>, ${e.magic ? "resist" : "defence"} ${e.def} · ${e.hp} → ${e.after}${e.kills ? " · <b class='side-back'>DOWN</b>" : ""}`;
     d.querySelector(".nm").textContent = e.unit.name; el.append(d);
   }
 }

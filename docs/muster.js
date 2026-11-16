@@ -6,6 +6,7 @@ import { SLOTS, HAIRS, STANCE_NAMES } from "./lib/gearlist.js";
 import { makeCharacter } from "./lib/character.js";
 import { SKILLS } from "./lib/battle.js";
 import * as P from "./lib/party.js";
+import { itemText } from "./lib/items.js";
 
 const $ = (id) => document.getElementById(id);
 const SW = 112, SH = 104, FEET = [56, 84], ZOOM = 3;
@@ -75,8 +76,11 @@ export function createMuster({ party, onChange, onStart }) {
     $("musterHair").replaceChildren(...HAIRS.map(([h, l]) => chip(l, () => set(P.setBody(def, { hair: h })), { pressed: body.hair === h })));
     $("musterBeard").replaceChildren(chip("No beard", () => set(P.setBody(def, { beard: false })), { pressed: !body.beard }), chip("Beard", () => set(P.setBody(def, { beard: true })), { pressed: !!body.beard }));
     const skills = c.skills.map((id) => `${SKILLS[id].name} (${SKILLS[id].mp} MP)`).join(", ") || "None";
-    $("musterStats").innerHTML = `<span>STANCE</span><b></b><span>HEALTH</span><b>${st.hp}</b><span>ATTACK</span><b>${st.atk}</b><span>MOVE</span><b>${st.move}</b>
-      <span>RANGE</span><b>${rangeText(st.range, st.line)}</b>${st.mp ? `<span>MP</span><b>${st.mp}</b>` : ""}<span>SKILLS</span><b>${skills}</b>`;
+    const kind = st.projectile === "arrow" ? "arrows" : st.projectile === "spell" ? "magic bolt" : st.line ? "reach" : "melee";
+    $("musterStats").innerHTML = `<span>STANCE</span><b></b><span>HEALTH</span><b>${st.hp}</b>${st.mp ? `<span>MP</span><b>${st.mp}</b>` : ""}
+      <span>ATTACK</span><b>${st.atk}</b><span>RANGE</span><b>${rangeText(st.range, st.line)} · ${kind}</b>
+      <span>ARMOUR</span><b>${st.def}</b><span>SHIELD</span><b>${st.block ? `${st.block} front · ${st.block / 2} side · 0 back` : "none"}</b>
+      <span>RESIST</span><b>${st.res}</b><span>MOVE</span><b>${st.move}</b><span>SKILLS</span><b>${skills}</b>`;
     $("musterStats").querySelector("b").textContent = stanceName(lo);
     $("musterPresets").replaceChildren(...Object.entries(LOOKS).map(([key, k]) => {
       const row = document.createElement("div"); row.className = "row";
@@ -88,7 +92,11 @@ export function createMuster({ party, onChange, onStart }) {
       const row = document.createElement("div"); row.className = "mslot";
       const t = document.createElement("div"); t.className = "label"; t.textContent = title;
       const r = document.createElement("div"); r.className = "row"; r.setAttribute("role", "group"); r.setAttribute("aria-label", title);
-      r.append(...[["", "None"], ...opts].map(([id, name]) => chip(name, () => set(P.equip(def, slot, id)), { pressed: (lo[slot] || "") === id })));
+      r.append(...[["", "None"], ...opts].map(([id, name]) => {
+        const c = chip(name, () => set(P.equip(def, slot, id)), { pressed: (lo[slot] || "") === id }), t = itemText(slot, id);
+        if (t) c.append(Object.assign(document.createElement("span"), { className: "it", textContent: t }));
+        return c;
+      }));
       row.append(t, r);
       return row;
     }));

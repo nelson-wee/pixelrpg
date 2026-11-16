@@ -13,10 +13,14 @@ let k = P.equip(knight, "main", "greatsword");
 assert.equal(k.look.loadout.main, "greatsword"); assert.equal(k.look.loadout.off, undefined); assert.equal(k.look.name, "Custom");
 k = P.equip(k, "off", "shield"); assert.equal(k.look.loadout.main, undefined); assert.equal(k.look.loadout.off, "shield");
 k = P.equip(k, "main", "sword"); assert.equal(k.look.name, "Knight", "back to the preset look");
+// a bow needs both hands: it empties the main hand, and a main-hand weapon puts the bow away
+let a = P.equip(knight, "off", "bow"); assert.equal(a.look.loadout.main, undefined); assert.equal(a.look.loadout.off, "bow");
+assert.deepEqual(makeCharacter(a).stats.range, [2, 4]); assert.equal(makeCharacter(a).projectile, "arrow");
+a = P.equip(a, "main", "mace"); assert.equal(a.look.loadout.off, undefined); assert.equal(a.look.loadout.main, "mace");
 assert.equal(knight.look.loadout.main, "sword", "equip returns a new definition");
 // presets change the gear, not the body; a knight in a robe keeps knight stats
 k = P.wearPreset(knight, "mage", 2); assert.equal(k.look.name, "Archmage"); assert.deepEqual(k.look.body, knight.look.body);
-assert.equal(makeCharacter(k).stats.hp, 42);
+assert.equal(makeCharacter(k).stats.hp, 38, "knight base; the robe gives no health");
 k = P.setBody(k, { type: "f", hair: "grey" }); assert.equal(k.look.body.type, "f"); assert.equal(k.look.loadout.chest, "robe");
 // save and load
 const changed = party.map((d, i) => (i === 0 ? k : d));
@@ -33,6 +37,6 @@ assert.deepEqual(fixed[1], P.defaultParty()[1]);
 assert.equal(fixed[2].look.body.hair, P.defaultParty()[2].look.body.hair);
 // the battle uses the party's gear
 const b = B.newBattle(B.demoRoster(changed)), u = b.units.find((x) => x.id === "p-knight");
-assert.equal(u.lo.chest, "robe"); assert.equal(u.gear, "Archmage"); assert.equal(u.maxHp, 42);
+assert.equal(u.lo.chest, "robe"); assert.equal(u.gear, "Archmage"); assert.equal(u.maxHp, 38); assert.equal(u.res, 10);
 assert.equal(b.units.filter((x) => x.team === "enemy").length, 6);
 console.log("party rules ok");

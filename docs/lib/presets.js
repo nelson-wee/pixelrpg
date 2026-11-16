@@ -16,9 +16,9 @@ export const LOOKS = {
     ["Ranger", "Leather", { head: "hood", chest: "jerkin", arms: "bracers", legs: "leggings", back: "quiver", off: "bow" }],
     ["Warden", "Brigandine", { head: "falconhelm", shoulders: "leatherpads", chest: "brigandine", arms: "bracers", legs: "leggings", back: "wardencloak", off: "greatbow" }]] },
   thief: { name: "Thief", role: "Infiltrator", shape: "/", body: { type: "m", hair: "hair" }, alt: { type: "f", hair: "ink" }, tiers: [
-    ["Footpad", "Rags", { head: "bandana", chest: "darktunic", legs: "wraps", main: "dagger" }],
-    ["Rogue", "Leather", { head: "cowl", chest: "garb", arms: "bracers", legs: "wraps", back: "scarf", main: "dagger", off: "dagger" }],
-    ["Shadow", "Lamellar", { head: "shadowmask", shoulders: "darkpads", chest: "lamellar", arms: "bracers", legs: "wraps", back: "longscarf", main: "dagger", off: "dagger" }]] },
+    ["Cutpurse", "Cloth", { head: "roguehoodB", chest: "darktunic", legs: "trousers", main: "dagger" }],
+    ["Rogue", "Leather", { head: "roguehoodC", chest: "roguejerkin", arms: "bracers", legs: "leggings", main: "dagger", off: "dagger" }],
+    ["Master thief", "Belted leather", { head: "roguehood", shoulders: "mantlet", chest: "roguejerkin", arms: "bracers", legs: "leggings", main: "shortsword", off: "dagger" }]] },
   cleric: { name: "Cleric", role: "Healer", shape: "A", body: { type: "f", hair: "hair" }, alt: { type: "m", hair: "hair" }, tiers: [
     ["Acolyte", "Habit", { chest: "habit", arms: "woolsleeves", off: "tome" }],
     ["Priest", "Vestment", { head: "veil", shoulders: "mantle", chest: "vestment", arms: "sleeves", main: "mace", off: "tome" }],
@@ -32,6 +32,8 @@ for (const k of Object.values(LOOKS)) k.loadout = k.tiers[2][2];
 // weapon variants shown on the stance and attack sheets
 export const KNIGHT_GS = { ...LOOKS.knight.loadout, main: "greatsword", off: undefined };
 export const LANCER_PH = { ...LOOKS.lancer.loadout, main: "shortspear", off: "shield" };
+// special equipment set, kept for a specialist or a set bonus later: the renaissance duelist (rapier and main-gauche)
+export const DUELIST = { head: "cavalier", chest: "doublet", arms: "puffsleeves", legs: "breeches", back: "halfcape", main: "rapier", off: "maingauche" };
 // enchanted pilot loadouts: [key, name, loadout, body] — each wears one item with a live gear effect
 export const ENCHANTED = [
   ["flame-sword", "Flame sword", { ...LOOKS.knight.loadout, main: "flamesword" }, LOOKS.knight.body],
