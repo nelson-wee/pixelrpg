@@ -18,9 +18,9 @@ const ANIMS = {
 };
 // status effects to preview on the unit: our own pixelfx effects in docs/fx. The bulwark's shield stands on the
 // unit's front: to the right in the front view, to the left and behind the body in the back view.
-const WARDS = { none: "None", arcane: "Arcane ward", bulwark: "Bulwark" };
+const WARDS = { none: "None", arcane: "Arcane ward", bulwark: "Bulwark", aegis: "Holy aegis" };
 const wardPiece = (ward, view) => ward === "none" ? [] : [{ slot: "ward", id: `${ward}-${view}`, spec: {
-  id: ward === "arcane" ? "ward/arcane-ward" : "ward/bulwark", target: "body", element: ward === "arcane" ? "arcane ward" : "bulwark",
+  id: { arcane: "ward/arcane-ward", bulwark: "ward/bulwark", aegis: "ward/holy-aegis" }[ward], target: "body", element: { arcane: "arcane ward", bulwark: "bulwark", aegis: "holy aegis" }[ward],
   opts: ward === "bulwark" && view === "back" ? { behind: true, dir: -1 } : {} } }];
 
 // presets: every class's three tiers, plus the two weapon variants

@@ -3,7 +3,8 @@
 // Pure data and logic: no DOM, no Node APIs.
 //
 // Stats an item can give: hp, mp, atk, def (armour, against weapons), res (resist, against magic),
-// block (shield defence: full from the front, half from the side, none from the back).
+// block (shield defence: full from the front, half from the side, none from the back),
+// blockChance (a shield's chance in % to block a hit outright: full from the front, half from the side, never from the back).
 // A weapon also sets the basic attack: range [min, max], line (straight-line reach), projectile ("arrow", "spell"
 // or none). hands: 2 means the item needs both hands (a two-handed weapon, or a bow in the off hand).
 
@@ -50,7 +51,7 @@ export const ITEMS = {
     rod: { atk: 0, mp: 2, attack: BOLT }, staff: { atk: 1, mp: 2, attack: BOLT }, froststaff: { atk: 2, mp: 2, attack: BOLT },
   },
   off: {
-    shield: { block: 3 }, buckler: { block: 1 }, maingauche: { atk: 1, block: 1 },
+    shield: { block: 3, blockChance: 30 }, buckler: { block: 1, blockChance: 15 }, maingauche: { atk: 1, block: 1, blockChance: 10 },
     dagger: { atk: 1 }, shadowdagger: { atk: 1 }, offsword: { atk: 2 }, offmace: { atk: 2 },
     tome: { res: 1, mp: 2 },
     shortbow: { atk: 1, hands: 2, attack: A([2, 3], { projectile: "arrow" }) },
@@ -58,7 +59,7 @@ export const ITEMS = {
     greatbow: { atk: 3, hands: 2, attack: A([2, 5], { projectile: "arrow" }) },
   },
 };
-export const STAT_KEYS = ["hp", "mp", "atk", "def", "res", "block"];
+export const STAT_KEYS = ["hp", "mp", "atk", "def", "res", "block", "blockChance"];
 export const UNARMED = MELEE;
 
 export const itemOf = (slot, id) => (id ? ITEMS[slot]?.[id] ?? null : null);
@@ -90,11 +91,11 @@ export function gearStats(lo) {
   for (const [slot, id] of Object.entries(worn(lo))) { const it = itemOf(slot, id); if (it) for (const k of STAT_KEYS) sum[k] += it[k] ?? 0; }
   return sum;
 }
-const LABEL = { hp: "HP", mp: "MP", atk: "ATK", def: "DEF", res: "RES", block: "SHIELD" };
+const LABEL = { hp: "HP", mp: "MP", atk: "ATK", def: "DEF", res: "RES", block: "SHIELD", blockChance: "BLOCK" };
 /** A short text for a piece, like "+4 DEF +4 HP" or "+2 ATK · reach 1–2". Empty when it gives nothing. */
 export function itemText(slot, id) {
   const it = itemOf(slot, id); if (!it) return "";
-  const parts = STAT_KEYS.filter((k) => it[k]).map((k) => `+${it[k]} ${LABEL[k]}`);
+  const parts = STAT_KEYS.filter((k) => it[k]).map((k) => `+${it[k]}${k === "blockChance" ? "%" : ""} ${LABEL[k]}`);
   if (it.attack && (it.attack.range[1] > 1)) parts.push(it.attack.line ? `reach ${it.attack.range[0]}–${it.attack.range[1]}` : `range ${it.attack.range[0]}–${it.attack.range[1]}`);
   if (it.hands === 2) parts.push("2H");
   return parts.join(" ");

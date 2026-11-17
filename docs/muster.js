@@ -75,11 +75,11 @@ export function createMuster({ party, onChange, onStart }) {
     $("musterBody").replaceChildren(...[["m", "Male"], ["f", "Female"]].map(([t, l]) => chip(l, () => set(P.setBody(def, { type: t })), { pressed: body.type === t })));
     $("musterHair").replaceChildren(...HAIRS.map(([h, l]) => chip(l, () => set(P.setBody(def, { hair: h })), { pressed: body.hair === h })));
     $("musterBeard").replaceChildren(chip("No beard", () => set(P.setBody(def, { beard: false })), { pressed: !body.beard }), chip("Beard", () => set(P.setBody(def, { beard: true })), { pressed: !!body.beard }));
-    const skills = c.skills.map((id) => `${SKILLS[id].name} (${SKILLS[id].mp} MP)`).join(", ") || "None";
+    const skills = c.skills.map((id) => `${SKILLS[id].name}${SKILLS[id].mp ? ` (${SKILLS[id].mp} MP)` : ""}`).join(", ") || "None";
     const kind = st.projectile === "arrow" ? "arrows" : st.projectile === "spell" ? "magic bolt" : st.line ? "reach" : "melee";
     $("musterStats").innerHTML = `<span>STANCE</span><b></b><span>HEALTH</span><b>${st.hp}</b>${st.mp ? `<span>MP</span><b>${st.mp}</b>` : ""}
       <span>ATTACK</span><b>${st.atk}</b><span>RANGE</span><b>${rangeText(st.range, st.line)} · ${kind}</b>
-      <span>ARMOUR</span><b>${st.def}</b><span>SHIELD</span><b>${st.block ? `${st.block} front · ${st.block / 2} side · 0 back` : "none"}</b>
+      <span>ARMOUR</span><b>${st.def}</b><span>SHIELD</span><b>${st.block ? `${st.block} front · ${st.block / 2} side · 0 back` : "none"}</b>${st.blockChance ? `<span>BLOCK</span><b>${st.blockChance}% front · ${st.blockChance / 2}% side</b>` : ""}
       <span>RESIST</span><b>${st.res}</b><span>MOVE</span><b>${st.move}</b><span>SKILLS</span><b>${skills}</b>`;
     $("musterStats").querySelector("b").textContent = stanceName(lo);
     $("musterPresets").replaceChildren(...Object.entries(LOOKS).map(([key, k]) => {

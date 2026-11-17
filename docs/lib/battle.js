@@ -31,24 +31,73 @@ export const PROPS = { "1,10": "oak", "9,6": "oak", "10,1": "pine", "1,4": "bann
 
 // ---------- units ----------
 // Skills: a second kind of action. A skill uses MP and takes the unit's action for the turn, like an attack.
-// target "ally": one allied unit in range (range 0 is the caster). target "tile": any tile in range.
-// area "plus": the target tile and its four grid neighbours (no diagonals). friendly: the area also hits allies.
+// A skill is data: who it can aim at, and a list of operations it does to each unit it touches.
+//   target "ally": one allied unit in range (range 0 is the caster). "self": the caster only. "tile": any tile in range.
+//   area "plus": the target tile and its four grid neighbours (no diagonals). friendly: the area also hits allies.
+//   needs "shield": the caster must have a shield's block chance.
+//   ops: { op: "heal", amount } | { op: "damage", power, magic, element } | { op: "status", id, turns, absorb }
 export const SKILLS = {
-  heal: { name: "Heal", mp: 6, range: [0, 3], target: "ally", heal: 14 },
-  fireball: { name: "Fireball", mp: 8, range: [2, 4], target: "tile", area: "plus", power: 10, friendly: true, magic: true, element: "fire" },
+  heal: { name: "Heal", mp: 6, range: [0, 3], target: "ally", ops: [{ op: "heal", amount: 14 }] },
+  fireball: { name: "Fireball", mp: 8, range: [2, 4], target: "tile", area: "plus", friendly: true, ops: [{ op: "damage", power: 10, magic: true, element: "fire" }] },
+  arcaneWard: { name: "Arcane Ward", mp: 6, range: [0, 2], target: "ally", ops: [{ op: "status", id: "ward", turns: 2 }] },
+  brace: { name: "Brace", mp: 0, range: [0, 0], target: "self", needs: "shield", ops: [{ op: "status", id: "brace", turns: 1 }] },
+  aegis: { name: "Aegis", mp: 6, range: [0, 3], target: "ally", ops: [{ op: "status", id: "aegis", turns: 3, absorb: 12 }] },
+};
+// Statuses: what a skill leaves on a unit. turns count down at the start of the unit's own phase; at 0 it ends
+// (so 1 turn lasts until the unit's next turn). mods change stats while it lasts: def adds armour, blockMult
+// multiplies the shield's block chance. absorb: the status takes damage before health and breaks when used up.
+// fx: our pixelfx loop drawn on the unit while it lasts; pose: the unit holds this pose while it lasts.
+export const STATUSES = {
+  ward: { name: "Arcane ward", mods: { def: 12 }, fx: "ward/arcane-ward" },
+  brace: { name: "Brace", mods: { blockMult: 2 }, fx: "ward/bulwark", pose: "block:0" },
+  aegis: { name: "Aegis", absorb: true, fx: "ward/holy-aegis" },
 };
 export const JUMP = 2;                                   // the largest height change for one step
 export const SIDE_MULT = { front: 1, side: 1.25, back: 1.5 };
 // Defence: damage = max(1, round(raw x K / (K + D))). Each point of D adds the same effective health (HP x (1 + D/K)),
 // it never reaches zero damage, and stacking stays safe. raw = attack (or skill power) x the side multiplier.
-// D is armour plus the shield's block, which counts fully from the front, half from the side and not from the back.
+// D is armour plus the shield's value, which counts fully from the front, half from the side and not from the back.
 // Magic uses resist instead of armour and shields.
-export const DEF_K = 20;
+// A shield also gives a chance to block a hit outright (no damage): full from the front, half from the side, never
+// from the back, never against magic.
+export const DEF_K = 20, BLOCK_CAP = 75;
 export const SHIELD_SIDE = { front: 1, side: 0.5, back: 0 };
 export const mitigate = (raw, d) => Math.max(1, Math.round((raw * DEF_K) / (DEF_K + Math.max(0, d))));
-export const defenceOf = (t, side) => t.def + t.block * SHIELD_SIDE[side];
+const modSum = (u, k) => (u.statuses ?? []).reduce((a, s) => a + (STATUSES[s.id].mods?.[k] ?? 0), 0);
+const modMul = (u, k) => (u.statuses ?? []).reduce((a, s) => a * (STATUSES[s.id].mods?.[k] ?? 1), 1);
+export const armourOf = (t) => t.def + modSum(t, "def");
+export const defenceOf = (t, side) => armourOf(t) + t.block * SHIELD_SIDE[side];
 // earmarked: resistances per element (fire, frost, storm, holy, shadow) will replace the one generic resist
-export const resistOf = (t, element) => t.res;
+export const resistOf = (t, element) => t.res + modSum(t, "res");
+export const blockChanceOf = (t, side, magic = false) => (magic ? 0 : Math.min(BLOCK_CAP, (t.blockChance ?? 0) * modMul(t, "blockMult") * SHIELD_SIDE[side]));
+export const absorbOf = (t) => (t.statuses ?? []).reduce((a, s) => a + (STATUSES[s.id].absorb ? s.left : 0), 0);
+export const hasStatus = (t, id) => (t.statuses ?? []).some((s) => s.id === id);
+// one hit on a unit: its defence, the damage, the chance to block it, and what an absorb shield would take
+function hitOn(t, raw, side, magic, element) {
+  const def = magic ? resistOf(t, element) : defenceOf(t, side), dmg = mitigate(raw, def), block = blockChanceOf(t, side, magic);
+  const absorbed = Math.min(absorbOf(t), dmg), lost = dmg - absorbed;
+  return { def, dmg, block, absorbed, lost, hp: t.hp, after: Math.max(0, t.hp - lost), kills: lost >= t.hp, expected: lost * (1 - block / 100) };
+}
+// a seeded random number in [0, 1): the battle carries its own state, so a seed replays the same battle
+function rand(b) {
+  let x = (b.rng = (b.rng + 0x6d2b79f5) | 0);
+  x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+  return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+}
+// a hit lands: roll the block, then the absorb shield takes what it can, then health
+function landHit(b, t, h) {
+  if (h.block > 0 && rand(b) * 100 < h.block) return { ...h, blocked: true, absorbed: 0, lost: 0, after: t.hp, kills: false };
+  let take = h.absorbed;
+  for (const s of t.statuses) if (take > 0 && STATUSES[s.id].absorb) { const k = Math.min(s.left, take); s.left -= k; take -= k; }
+  const broke = t.statuses.filter((s) => STATUSES[s.id].absorb && s.left <= 0).map((s) => s.id);
+  t.statuses = t.statuses.filter((s) => !(STATUSES[s.id].absorb && s.left <= 0));
+  t.hp = Math.max(0, t.hp - h.lost);
+  return { ...h, blocked: false, broke };
+}
+function addStatus(u, op, source) {
+  u.statuses = u.statuses.filter((s) => s.id !== op.id);
+  u.statuses.push({ id: op.id, turns: op.turns, source, ...(op.absorb ? { left: op.absorb, max: op.absorb } : {}) });
+}
 export const RANGED = (u) => u.range[1] > 1 && !u.line; // archers and mages shoot; the lancer's reach is melee
 
 // The demo teams, as character definitions. Your party wears each archetype's top-tier look with the default
@@ -79,13 +128,13 @@ export function placeUnit({ character, team, tile, facing }) {
     id: c.id, team, name: c.name, archetype: c.archetype, className: c.className, character: c,
     lo: { ...c.look.loadout }, body: { ...c.look.body }, gear: c.look.name, projectile: c.projectile,
     tile: [...tile], facing: facing ?? START_FACING[team],
-    hp: st.hp, maxHp: st.hp, atk: st.atk, def: st.def, res: st.res, block: st.block, move: st.move, range: [...st.range], line: st.line,
-    mp: st.mp, maxMp: st.mp, skills: [...c.skills],
+    hp: st.hp, maxHp: st.hp, atk: st.atk, def: st.def, res: st.res, block: st.block, blockChance: st.blockChance, move: st.move, range: [...st.range], line: st.line,
+    mp: st.mp, maxMp: st.mp, skills: [...c.skills], statuses: [],
     alive: true, moved: false, acted: false, done: false,
   };
 }
-export function newBattle(roster = DEMO_ROSTER) {
-  return { round: 1, phase: "player", units: roster.map(placeUnit), log: [] };
+export function newBattle(roster = DEMO_ROSTER, { seed = 1 } = {}) {
+  return { round: 1, phase: "player", units: roster.map(placeUnit), log: [], rng: seed | 0 };
 }
 
 // ---------- grid helpers ----------
@@ -146,14 +195,15 @@ export function rangeTiles(u, from = u.tile) {
 export const foesOf = (b, u) => b.units.filter((f) => f.alive && f.team !== u.team);
 export const targets = (b, u, from = u.tile) => foesOf(b, u).filter((f) => inRange(u, from, f.tile));
 
-// what an attack would do: the side it lands on (from the defender's facing), the multiplier and the damage
+// what an attack would do: the side it lands on (from the defender's facing), the multiplier, the defence, the
+// damage, the chance to block it and what an absorb shield would take. expected: the damage times the chance it lands.
 export function preview(b, u, t, from = u.tile) {
-  const side = attackSide(t.tile, t.facing, from), mult = SIDE_MULT[side], raw = u.atk * mult, def = defenceOf(t, side), dmg = mitigate(raw, def);
-  return { side, mult, raw, def, dmg, hp: t.hp, after: Math.max(0, t.hp - dmg), kills: dmg >= t.hp };
+  const side = attackSide(t.tile, t.facing, from), mult = SIDE_MULT[side], raw = u.atk * mult;
+  return { side, mult, raw, ...hitOn(t, raw, side, false) };
 }
 
 // ---------- skills ----------
-export const canCast = (u, id) => u.skills.includes(id) && !u.acted && u.mp >= SKILLS[id].mp;
+export const canCast = (u, id) => u.skills.includes(id) && !u.acted && u.mp >= SKILLS[id].mp && (SKILLS[id].needs !== "shield" || (u.blockChance ?? 0) > 0);
 export function inSkillRange(id, from, to) { const d = dist(from, to), r = SKILLS[id].range; return d >= r[0] && d <= r[1]; }
 export function skillTiles(id, from) {
   const out = [];
@@ -164,26 +214,29 @@ export function areaOf(id, tile) {
   if (SKILLS[id].area !== "plus") return [tile];
   return [tile, ...STEPS.map(([, [dc, dr]]) => [tile[0] + dc, tile[1] + dr])].filter(inside);
 }
-// the units a skill can aim at from a tile (heal), or null when it aims at any tile in range (fireball)
+// the units a skill can aim at from a tile (heal, ward, aegis; the caster for a self skill), or null when it aims at
+// any tile in range (fireball)
 export function skillTargets(b, u, id, from = u.tile) {
-  if (SKILLS[id].target !== "ally") return null;
+  const s = SKILLS[id];
+  if (s.target === "self") return [u];
+  if (s.target !== "ally") return null;
   return b.units.filter((a) => a.alive && a.team === u.team && inSkillRange(id, from, a.tile));
 }
-// what a skill would do: one entry per unit it touches. Damage uses the same front/side/back rule as attacks,
-// seen from the caster's tile.
+// what a skill would do: one entry per unit and operation. Damage uses the same front/side/back rule as attacks,
+// seen from the caster's tile; magic goes by resist and cannot be blocked.
 export function skillPreview(b, u, id, tile, from = u.tile) {
   const s = SKILLS[id], effects = [];
-  if (s.target === "ally") {
-    const a = unitAt(b, tile);
-    if (a && a.team === u.team) { const amount = Math.min(s.heal, a.maxHp - a.hp); effects.push({ unit: a, kind: "heal", amount, hp: a.hp, after: a.hp + amount }); }
-  } else {
-    for (const t of areaOf(id, tile)) {
-      const a = unitAt(b, t);
-      if (!a || (a.team === u.team && !s.friendly)) continue;
-      const side = attackSide(a.tile, a.facing, from), mult = SIDE_MULT[side], raw = s.power * mult;
-      const def = s.magic ? resistOf(a, s.element) : defenceOf(a, side), amount = mitigate(raw, def);
-      effects.push({ unit: a, kind: "damage", side, mult, raw, def, magic: !!s.magic, amount, hp: a.hp, after: Math.max(0, a.hp - amount), kills: amount >= a.hp, ally: a.team === u.team });
-    }
+  let hit = [];
+  if (s.target === "self") hit = [u];
+  else if (s.target === "ally") { const a = unitAt(b, tile); if (a && a.team === u.team) hit = [a]; }
+  else hit = areaOf(id, tile).map((t) => unitAt(b, t)).filter((a) => a && (a.team !== u.team || s.friendly));
+  for (const a of hit) for (const op of s.ops) {
+    if (op.op === "heal") { const amount = Math.min(op.amount, a.maxHp - a.hp); effects.push({ unit: a, kind: "heal", amount, hp: a.hp, after: a.hp + amount }); }
+    else if (op.op === "damage") {
+      const side = attackSide(a.tile, a.facing, from), mult = SIDE_MULT[side], raw = op.power * mult;
+      effects.push({ unit: a, kind: "damage", side, mult, raw, magic: !!op.magic, element: op.element, ally: a.team === u.team, amount: 0, ...hitOn(a, raw, side, op.magic, op.element) });
+      effects[effects.length - 1].amount = effects[effects.length - 1].dmg;
+    } else if (op.op === "status") effects.push({ unit: a, kind: "status", id: op.id, turns: op.turns, absorb: op.absorb ?? 0, op });
   }
   return { id, name: s.name, mp: s.mp, tile, effects };
 }
@@ -194,10 +247,13 @@ export function cast(b, u, id, tile) {
   u.mp -= s.mp; u.moved = u.acted = true;
   const parts = [];
   for (const e of p.effects) {
-    e.unit.hp = e.after;
-    parts.push(e.kind === "heal" ? `${e.unit.name} +${e.amount} HP` : `${e.unit.name} ${e.amount}${e.mult > 1 ? ` (${e.side})` : ""}`);
+    if (e.kind === "heal") { e.unit.hp = e.after; parts.push(`${e.unit.name} +${e.amount} HP`); }
+    else if (e.kind === "damage") {
+      Object.assign(e, landHit(b, e.unit, e));
+      parts.push(e.blocked ? `${e.unit.name} blocks` : `${e.unit.name} ${e.lost}${e.absorbed ? ` (${e.absorbed} absorbed)` : ""}${e.mult > 1 ? ` (${e.side})` : ""}`);
+    } else if (e.kind === "status") { addStatus(e.unit, e.op, u.id); parts.push(`${e.unit.name}: ${STATUSES[e.id].name}`); }
   }
-  say(b, `${u.name} casts ${s.name}${parts.length ? ": " + parts.join(", ") : " and hits nothing"}.`);
+  say(b, `${u.name} uses ${s.name}${parts.length ? ": " + parts.join(", ") : " and hits nothing"}.`);
   for (const e of p.effects) if (e.unit.hp <= 0 && e.unit.alive) { e.unit.alive = false; say(b, `${e.unit.name} is down.`); }
   return p;
 }
@@ -214,12 +270,14 @@ export function moveAlong(b, u, path) {
 }
 export function strike(b, u, t) {
   u.facing = facingToward(u.tile, t.tile);
-  const p = preview(b, u, t);
-  t.hp = p.after;
+  const p = { ...preview(b, u, t) }, r = landHit(b, t, p);
   u.moved = u.acted = true;
-  say(b, `${u.name} hits ${t.name} from the ${p.side}${p.mult > 1 ? ` (×${p.mult})` : ""}: ${p.dmg} damage.`);
+  const where = `from the ${r.side}${r.mult > 1 ? ` (×${r.mult})` : ""}`;
+  if (r.blocked) say(b, `${t.name} blocks ${u.name}'s attack ${where}.`);
+  else say(b, `${u.name} hits ${t.name} ${where}: ${r.lost} damage${r.absorbed ? ` (${r.absorbed} absorbed by the aegis)` : ""}.`);
+  for (const id of r.broke ?? []) say(b, `${t.name}'s ${STATUSES[id].name.toLowerCase()} breaks.`);
   if (t.hp <= 0) { t.alive = false; say(b, `${t.name} is down.`); }
-  return p;
+  return r;
 }
 export function finish(b, u, facing = u.facing) {
   u.facing = facing;
@@ -229,6 +287,12 @@ export function nextPhase(b) {
   b.phase = b.phase === "player" ? "enemy" : "player";
   if (b.phase === "player") b.round++;
   for (const u of b.units) u.moved = u.acted = u.done = false;
+  // statuses count down at the start of their unit's own phase
+  for (const u of b.units) if (u.alive && u.team === b.phase) {
+    for (const st of u.statuses) st.turns--;
+    for (const st of u.statuses.filter((x) => x.turns <= 0)) say(b, `${u.name}'s ${STATUSES[st.id].name.toLowerCase()} ends.`);
+    u.statuses = u.statuses.filter((x) => x.turns > 0);
+  }
 }
 export function winner(b) {
   const alive = (team) => b.units.some((u) => u.alive && u.team === team);
@@ -241,7 +305,23 @@ export const nearestFoe = (b, u, from = u.tile) => foesOf(b, u).sort((x, y) => d
 // that makes it look for side and back attacks by itself. With no target in reach, walk toward the nearest foe.
 // At the end, face the nearest foe, so that its own back is not open.
 // Skills compete on the same score: a heal counts the health it restores (only when an ally lost at least 6),
-// a fireball counts the damage to foes and pays double for damage to its own side.
+// a fireball counts the damage to foes and pays double for damage to its own side. A protective status counts the
+// damage it would stop next turn, from the foes close enough to strike its target (see threatOn).
+// Attacks and damage count what is expected to land: a shield's block chance lowers them.
+export function threatOn(b, a, extra = null) {
+  return foesOf(b, a).filter((f) => dist(f.tile, a.tile) <= f.move + f.range[1]).map((f) => {
+    const raw = f.atk, side = "front", now = hitOn(a, raw, side, false), d0 = now.dmg * (1 - now.block / 100);
+    if (!extra) return d0;
+    const was = a.statuses; a.statuses = [...was, extra];
+    const after = hitOn(a, raw, side, false); a.statuses = was;
+    return d0 - after.lost * (1 - after.block / 100);
+  }).reduce((x, y) => x + y, 0);
+}
+function statusValue(b, a, e) {
+  if (hasStatus(a, e.id)) return 0;
+  const fake = { id: e.id, turns: e.turns, ...(e.absorb ? { left: e.absorb, max: e.absorb } : {}) };
+  return threatOn(b, a, fake) * (e.turns > 1 ? 1.3 : 1);
+}
 export function aiPlan(b, u) {
   const options = [{ tile: u.tile, path: [] }, ...reach(b, u).values()];
   let best = null;
@@ -249,21 +329,25 @@ export function aiPlan(b, u) {
   for (const o of options) {
     const step = -o.path.length * 0.05;
     for (const t of targets(b, u, o.tile)) {
-      const p = preview(b, u, t, o.tile);
-      offer(p.dmg + (p.kills ? 100 : 0) + (RANGED(u) ? dist(o.tile, t.tile) * 0.3 : 0) + step, o, { type: "attack", target: t });
+      const p = preview(b, u, t, o.tile), land = 1 - p.block / 100;
+      offer(p.expected + (p.kills ? 100 * land : 0) + (RANGED(u) ? dist(o.tile, t.tile) * 0.3 : 0) + step, o, { type: "attack", target: t });
     }
     for (const id of u.skills) {
-      if (u.mp < SKILLS[id].mp) continue;
-      const aims = SKILLS[id].target === "ally" ? skillTargets(b, u, id, o.tile).map((a) => a.tile) : skillTiles(id, o.tile);
+      if (!canCast(u, id)) continue;
+      const S = SKILLS[id], self = S.target === "self";
+      const aims = S.target === "tile" ? skillTiles(id, o.tile) : self ? [o.tile] : skillTargets(b, u, id, o.tile).map((a) => a.tile);
       for (const tile of aims) {
+        const was = u.tile; if (self) u.tile = o.tile; // judge a self skill where the unit would stand
         const p = skillPreview(b, u, id, tile, o.tile);
         let score = 0, foes = 0;
         for (const e of p.effects) {
           if (e.kind === "heal") score += e.amount >= 6 ? e.amount * 1.1 : 0;
+          else if (e.kind === "status") score += statusValue(b, e.unit, e);
           else if (e.ally) score -= e.amount * 2 + (e.kills ? 150 : 0);
-          else { foes++; score += e.amount + (e.kills ? 100 : 0); }
+          else { foes++; score += e.expected + (e.kills ? 100 : 0); }
         }
-        if (score > 0 && (SKILLS[id].target === "ally" || foes)) offer(score + step, o, { type: "skill", skill: id, tile });
+        u.tile = was;
+        if (score > 0.5 && (S.target !== "tile" || foes)) offer(score + step, o, { type: "skill", skill: id, tile });
       }
     }
   }

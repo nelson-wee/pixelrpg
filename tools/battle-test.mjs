@@ -60,7 +60,7 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
 // a full battle with the AI on both sides
 {
   const b = B.newBattle();
-  let sides = { front: 0, side: 0, back: 0 }, casts = { heal: 0, fireball: 0 }, guard = 0;
+  let sides = { front: 0, side: 0, back: 0 }, casts = {}, blocks = 0, guard = 0;
   while (!B.winner(b) && b.round <= 40) {
     for (const u of b.units.filter((x) => x.alive && x.team === b.phase)) {
       const plan = B.aiPlan(b, u);
@@ -68,10 +68,10 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
       assert.ok(B.walkable(u.tile));
       assert.equal(b.units.filter((x) => x.alive && B.same(x.tile, u.tile)).length, 1, "one unit per tile");
       const a = plan.action;
-      if (a?.type === "attack") { assert.ok(B.inRange(u, u.tile, a.target.tile)); sides[B.strike(b, u, a.target).side]++; }
+      if (a?.type === "attack") { assert.ok(B.inRange(u, u.tile, a.target.tile)); const r = B.strike(b, u, a.target); sides[r.side]++; blocks += r.blocked ? 1 : 0; }
       if (a?.type === "skill") {
         assert.ok(B.canCast(u, a.skill)); assert.ok(B.inSkillRange(a.skill, u.tile, a.tile));
-        const mp = u.mp; B.cast(b, u, a.skill, a.tile); casts[a.skill]++;
+        const mp = u.mp; B.cast(b, u, a.skill, a.tile); casts[a.skill] = (casts[a.skill] ?? 0) + 1;
         assert.equal(u.mp, mp - B.SKILLS[a.skill].mp);
       }
       B.finish(b, u, plan.facing);
@@ -82,7 +82,7 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
   }
   const w = B.winner(b);
   assert.ok(w, "the battle ends");
-  console.log(`AI against AI: ${w} wins in round ${b.round}. Hits: ${sides.front} front, ${sides.side} side, ${sides.back} back. Casts: ${casts.heal} heal, ${casts.fireball} fireball.`);
+  console.log(`AI against AI: ${w} wins in round ${b.round}. Hits: ${sides.front} front, ${sides.side} side, ${sides.back} back. Blocked: ${blocks}. Casts: ${Object.entries(casts).map(([k, n]) => `${n} ${k}`).join(", ")}.`);
   assert.ok(b.units.every((u) => u.mp >= 0 && u.hp >= 0 && u.hp <= u.maxHp));
   console.log(b.units.map((u) => `${u.team[0]}:${u.name} ${u.hp}/${u.maxHp}`).join(" · "));
 }
@@ -125,7 +125,7 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
   // a knight in a mage's robe and staff: knight base, the robe's stats, the staff's bolt, no skills
   const def = { id: "odd", name: "Odd", archetype: "knight", look: presetLook("mage") }, c = makeCharacter(def);
   assert.deepEqual([c.stats.hp, c.stats.atk, c.stats.def, c.stats.res, c.stats.range, c.projectile], [38, 9, 0, 10, [2, 3], "spell"]);
-  assert.deepEqual(c.skills, []); assert.equal(c.look.loadout.chest, "robe");
+  assert.deepEqual(c.skills, ["brace"]); assert.equal(c.look.loadout.chest, "robe");
   const b = B.newBattle([{ character: c, team: "player", tile: [5, 5] }, ...roster([["e", "enemy", "mage", "E", [5, 7]]])]);
   const [u, e] = b.units;
   assert.equal(u.character, c); assert.equal(u.lo.main, "staff"); assert.equal(u.facing, "NE");
@@ -136,6 +136,47 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
   const d = B.newBattle(), arch = (t) => d.units.filter((x) => x.team === t).map((x) => x.archetype).sort();
   assert.deepEqual(arch("player"), arch("enemy"));
   assert.ok(d.units.filter((x) => x.team === "enemy").every((x) => x.gear !== d.units.find((p) => p.team === "player" && p.archetype === x.archetype).gear));
+}
+// block chance: a kite shield blocks 30% from the front, 15% from the side, never from the back or against magic;
+// Brace doubles it until the knight's next turn
+{
+  const b = B.newBattle(roster([["a", "player", "thief", "A", [5, 5]], ["k", "enemy", "knight", "K", [5, 6]]]), { seed: 7 });
+  const [a, k] = b.units;
+  assert.equal(k.blockChance, 30);
+  k.facing = "NE"; assert.equal(B.preview(b, a, k).block, 30);
+  k.facing = "SE"; assert.equal(B.preview(b, a, k).block, 15);
+  k.facing = "SW"; assert.equal(B.preview(b, a, k).block, 0);
+  assert.equal(B.blockChanceOf(k, "front", true), 0, "magic cannot be blocked");
+  k.facing = "NE";
+  b.phase = "enemy"; assert.ok(B.canCast(k, "brace"));
+  B.cast(b, k, "brace", k.tile);
+  assert.ok(B.hasStatus(k, "brace")); assert.equal(B.preview(b, a, k).block, 60); assert.equal(B.blockChanceOf(k, "side"), 30);
+  B.nextPhase(b); assert.ok(B.hasStatus(k, "brace"), "still braced through the other side's phase");
+  B.nextPhase(b); assert.ok(!B.hasStatus(k, "brace"), "it ends at the knight's next turn");
+  // over many hits, close to 30% are blocked, and a blocked hit does no damage
+  let blocked = 0;
+  for (let i = 0; i < 400; i++) { k.hp = k.maxHp; a.acted = false; a.tile = [5, 5]; const r = B.strike(b, a, k); if (r.blocked) { blocked++; assert.equal(k.hp, k.maxHp); } }
+  assert.ok(blocked > 90 && blocked < 150, `blocked ${blocked} of 400`);
+  // a knight with no shield cannot brace
+  const nb = B.newBattle([{ character: { id: "g", name: "G", archetype: "knight", look: { loadout: { main: "greatsword" }, body: { type: "m" } } }, team: "player", tile: [1, 1] }]);
+  assert.ok(!B.canCast(nb.units[0], "brace"));
+}
+// Arcane Ward: +12 armour for 2 turns; Aegis: absorbs 12 damage, then breaks
+{
+  const b = B.newBattle(roster([["m", "player", "mage", "M", [5, 5]], ["c", "player", "cleric", "C", [5, 6]], ["x", "enemy", "thief", "X", [6, 5]]]));
+  const [m, c, x] = b.units;
+  const before = B.preview(b, x, m).dmg;
+  B.cast(b, m, "arcaneWard", m.tile);
+  assert.equal(B.armourOf(m), 12); assert.ok(B.preview(b, x, m).dmg < before);
+  B.nextPhase(b); B.nextPhase(b); assert.ok(B.hasStatus(m, "ward"), "lasts through two enemy phases");
+  B.nextPhase(b); B.nextPhase(b); assert.ok(!B.hasStatus(m, "ward"));
+  b.phase = "player"; m.acted = c.acted = false;
+  B.cast(b, c, "aegis", m.tile);
+  assert.equal(B.absorbOf(m), 12);
+  const hp = m.hp, r = B.strike(b, x, m);
+  assert.equal(r.absorbed, Math.min(12, r.dmg)); assert.equal(m.hp, hp - r.lost); assert.equal(B.absorbOf(m), 12 - r.absorbed);
+  x.atk = 60; x.acted = false; const r2 = B.strike(b, x, m);
+  assert.ok(!B.hasStatus(m, "aegis"), "the aegis breaks when it is used up"); assert.deepEqual(r2.broke, ["aegis"]);
 }
 // every gear piece is an item, and every item is a gear piece
 {

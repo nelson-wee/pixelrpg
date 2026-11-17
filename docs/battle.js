@@ -11,6 +11,7 @@ const ATTACK_MS = [220, 320, 200, 350];           // ready, wind-up, strike, fol
 const STEP_MS = 170, ARROW_PX = 360, SPELL_PX = 240; // 24 and 16 px per frame at 15 fps
 const TEAM = { player: { ring: "#8cc4f0", bar: "#6ab0e8" }, enemy: { ring: "#f08a6e", bar: "#e0604e" } };
 const SIDE_COLOR = { front: "#fbf2dc", side: "#f0c85a", back: "#f08a6e" };
+const STATUS_COLOR = { ward: "#a890f0", brace: "#c2c8d3", aegis: "#ffd25e" };
 
 // ---------- geometry: tile tops and unit feet in map pixels ----------
 const tileTop = (i, j) => [OX + (i - j) * HW, OY + (i + j) * HH - B.height(i, j) * STEP + 6 * STEP - STEP];
@@ -79,10 +80,12 @@ const fxMods = {};
   try {
     const core = await import("./pixelfx/core/index.js");
     for (const f of Object.values(SKILL_FX)) fxMods[f.id] = await import(`./pixelfx/fx/${f.id}.js`);
+    for (const st of Object.values(B.STATUSES)) if (st.fx) fxMods[st.fx] = await import(`./fx/${st.fx}.js`);
     PFX = core;
   } catch (e) { PFX = null; /* no pixelfx files: the sparks stand in */ }
 })();
 function spawnFx(skill, tile, unit) {
+  if (!SKILL_FX[skill]) return null;
   const f = SKILL_FX[skill], mod = PFX && fxMods[f.id], [fx, fy] = feetOf(...tile);
   const e = { skill, depth: B.key(tile), x: fx, y: fy + (f.dy ?? 0), t0: clock, overlay: !f.body };
   if (mod) {
@@ -94,7 +97,45 @@ function spawnFx(skill, tile, unit) {
   effects.push(e);
   return e;
 }
+// status loops on units (arcane ward, bulwark, holy aegis): one pixelfx instance per unit and status, made again
+// when the unit turns. SW and NE are drawn mirrored, so the effect is flipped and reads the unmirrored body.
+const statusFx = new Map();
+const BASE_FACING = { SE: "SE", SW: "SE", NW: "NW", NE: "NW" };
+function syncStatusFx() {
+  const want = new Set();
+  for (const u of b.units) {
+    if (!u.alive) continue;
+    const v = vis.get(u.id), facing = v.facing ?? u.facing;
+    for (const st of u.statuses) {
+      const S = B.STATUSES[st.id], mod = PFX && S.fx && fxMods[S.fx];
+      if (!mod) continue;
+      const k = `${u.id}|${st.id}`; want.add(k);
+      const old = statusFx.get(k);
+      if (old && old.facing === facing) continue;
+      const [w, h] = mod.meta.size, [ox, oy] = mod.meta.origin, back = facing === "NW" || facing === "NE", flip = facing === "SW" || facing === "NE";
+      const actor = actorFrom(PFX, spriteOf(u, BASE_FACING[facing], 0, null).img, FX, FY);
+      const opts = st.id === "brace" && back ? { behind: true, dir: -1 } : {};
+      statusFx.set(k, { unit: u.id, facing, w, h, ox, oy, frame: PFX.createFrame(w, h),
+        inst: PFX.createFx(mod, { x: ox, y: oy, seed: 4, flip, actor, ...opts }),
+        back: Object.assign(document.createElement("canvas"), { width: w, height: h }), front: Object.assign(document.createElement("canvas"), { width: w, height: h }) });
+    }
+  }
+  for (const k of [...statusFx.keys()]) if (!want.has(k)) statusFx.delete(k);
+}
+function drawStatusFx(u, layer, fx, fy) {
+  for (const e of statusFx.values()) if (e.unit === u.id) ctx.drawImage(e[layer], Math.round(fx - e.ox), Math.round(fy - e.oy));
+}
 function stepFx(dt) {
+  if (b && PFX) {
+    syncStatusFx();
+    for (const e of statusFx.values()) {
+      e.inst.update(dt / 1000);
+      for (const layer of ["back", "front"]) {
+        PFX.clearFrame(e.frame); e.inst.draw(e.frame, layer);
+        e[layer].getContext("2d").putImageData(new ImageData(PFX.composite(e.frame, new Uint8ClampedArray(e.w * e.h * 4), null), e.w, e.h), 0, 0);
+      }
+    }
+  }
   effects = effects.filter((e) => clock - e.t0 < e.dur);
   for (const e of effects) if (e.inst) {
     e.inst.update(dt / 1000);
@@ -128,10 +169,10 @@ const hitStop = (ms) => { stopUntil = performance.now() + ms; };
 // ---------- state ----------
 let b, vis, ui, floats, shots, effects = [];
 function reset() {
-  b = B.newBattle(B.demoRoster(party));
+  b = B.newBattle(B.demoRoster(party), { seed: (Math.random() * 2 ** 31) | 0 }); // a new seed each battle (block rolls)
   vis = new Map(b.units.map((u) => [u.id, { pos: null, depth: null, facing: null, pose: null, flash: 0, gone: false, blink: false, hp: u.hp }]));
   ui = { mode: "idle", sel: null, target: null, from: null, reach: null, hover: null, cursor: [4, 7], busy: false, info: null };
-  floats = []; shots = []; effects = [];
+  floats = []; shots = []; effects = []; statusFx.clear();
   $("over").classList.remove("show");
   banner(`Round 1 · Player phase`);
   refresh();
@@ -154,7 +195,7 @@ function marksNow() {
     for (const k of ui.reach.keys()) m.set(k, "move");
   } else if (mode === "skill") {
     const sk = B.SKILLS[ui.skill];
-    for (const t of B.skillTiles(ui.skill, sel.tile)) m.set(B.key(t), sk.target === "ally" ? "ally" : "attack");
+    for (const t of B.skillTiles(ui.skill, sel.tile)) m.set(B.key(t), sk.target === "tile" ? "attack" : "ally");
     if (aimOk()) for (const t of B.areaOf(ui.skill, skillAim())) m.set(B.key(t), "area");
   } else if (mode === "target") {
     for (const t of B.rangeTiles(sel)) m.set(B.key(t), "attack");
@@ -201,9 +242,12 @@ function draw() {
       const [fx, fy] = unitPos(u).map((c, i) => c + (i ? ky : kx));
       ctx.drawImage(ringOf(u.team, facing), Math.round(fx) - 20, Math.round(fy) - 10);
       if (v.blink && Math.floor(clock / 80) % 2) continue;
+      drawStatusFx(u, "back", fx, fy);
       const bob = v.walking ? Math.floor(clock / STEP_MS) % 2 : (beat + b.units.indexOf(u)) % 2;
-      const sp = spriteOf(u, facing, bob, v.pose ?? reactionOf(v)), pic = v.flash > clock ? sp.white : u.done && u.alive ? sp.dim : sp.c;
+      const held = u.statuses.map((st) => B.STATUSES[st.id].pose).find(Boolean) ?? null; // a braced knight holds the block pose
+      const sp = spriteOf(u, facing, bob, v.pose ?? reactionOf(v) ?? held), pic = v.flash > clock ? sp.white : u.done && u.alive ? sp.dim : sp.c;
       ctx.drawImage(pic, Math.round(fx) - sp.fx, Math.round(fy) - FY + 1);
+      drawStatusFx(u, "front", fx, fy);
     }
     for (const e of here) drawFx(e, "front");
   }
@@ -215,6 +259,15 @@ function draw() {
     ctx.fillStyle = "#120c18"; ctx.fillRect(x, y, 22, 4);
     ctx.fillStyle = "#3d2f42"; ctx.fillRect(x + 1, y + 1, 20, 2);
     ctx.fillStyle = TEAM[u.team].bar; ctx.fillRect(x + 1, y + 1, Math.max(0, Math.round((20 * v.hp) / u.maxHp)), 2);
+    const ab = B.absorbOf(u);
+    if (ab > 0) { // what an absorb shield still holds, after the health
+      const hw = Math.max(0, Math.round((20 * v.hp) / u.maxHp)), aw = Math.min(20 - hw, Math.max(1, Math.round((20 * ab) / u.maxHp)));
+      ctx.fillStyle = "#fff2b0"; ctx.fillRect(x + 1 + hw, y + 1, aw, 2);
+    }
+    u.statuses.forEach((st, i) => { // one small square per status, over the bar
+      ctx.fillStyle = "#120c18"; ctx.fillRect(x + i * 5, y - 5, 5, 5);
+      ctx.fillStyle = STATUS_COLOR[st.id] ?? "#ead6b0"; ctx.fillRect(x + 1 + i * 5, y - 4, 3, 3);
+    });
     if (u.maxMp) { // MP under the health bar
       ctx.fillStyle = "#120c18"; ctx.fillRect(x, y + 4, 22, 3);
       ctx.fillStyle = "#3d2f42"; ctx.fillRect(x + 1, y + 5, 20, 1);
@@ -263,6 +316,7 @@ function flinch(t, from) {
 function reactionOf(v) {
   const r = v.react; if (!r) return null;
   const k = clock - r.t0;
+  if (r.kind === "block") return k < 150 ? "block:1" : k < 420 ? "block:0" : null;
   return k < FLINCH[0] ? "hurt:0" : k < FLINCH[0] + FLINCH[1] ? "hurt:1" : null;
 }
 function knockOf(v) {
@@ -300,11 +354,7 @@ async function attackAnim(u, t) {
   v.facing = facing;
   const impact = () => {
     const r = B.strike(b, u, t);
-    vt.hp = t.hp; vt.flash = clock + 90; flinch(t, unitPos(u));
-    const [x, y] = unitPos(t), top = spriteOf(t, "SE", 0, null).top, hy = y - FY + 1 + top - 10;
-    floats.push({ text: String(r.dmg), x, y: hy, color: "#fbf2dc", size: 12, t0: clock, dur: 1000 });
-    if (r.side !== "front") floats.push({ text: r.side.toUpperCase() + "!", x, y: hy - 11, color: SIDE_COLOR[r.side], size: 8, t0: clock, dur: 1000 });
-    hitStop(r.side === "back" ? 160 : 100);
+    showHit(t, r, unitPos(u));
     log();
   };
   for (const [i, ms] of ATTACK_MS.slice(0, 2).entries()) { v.pose = i; await wait(ms); }
@@ -320,11 +370,28 @@ async function attackAnim(u, t) {
   if (!t.alive) { vt.blink = true; await wait(640); vt.gone = true; vt.blink = false; }
 }
 
+// a hit's outcome over the target: a block (the block pose, BLOCKED), what an aegis absorbed, the damage, the side
+function showHit(t, r, from) {
+  const vt = vis.get(t.id), [x, y] = unitPos(t), hy = y - FY + 1 + spriteOf(t, "SE", 0, null).top - 10;
+  vt.hp = t.hp;
+  if (r.blocked) {
+    vt.react = { t0: clock, kind: "block", dx: 0, dy: 0 };
+    floats.push({ text: "BLOCKED", x, y: hy, color: "#c2c8d3", size: 9, t0: clock, dur: 1000 });
+    hitStop(120);
+    return;
+  }
+  vt.flash = clock + 90; flinch(t, from);
+  if (r.lost > 0 || !r.absorbed) floats.push({ text: String(r.lost), x, y: hy, color: "#fbf2dc", size: 12, t0: clock, dur: 1000 });
+  if (r.absorbed) floats.push({ text: `ABSORBED ${r.absorbed}`, x, y: hy + (r.lost > 0 ? 9 : 0), color: "#ffd25e", size: 7, t0: clock, dur: 1100 });
+  if (r.side !== "front") floats.push({ text: r.side.toUpperCase() + "!", x, y: hy - 11, color: SIDE_COLOR[r.side], size: 8, t0: clock, dur: 1000 });
+  hitStop(r.side === "back" ? 160 : 100);
+}
+
 // a skill: the caster's attack poses, then a fireball flies to the tile and bursts, or a heal plays on the ally
 async function castAnim(u, id, tile) {
   const v = vis.get(u.id), sk = B.SKILLS[id];
   if (!B.same(tile, u.tile)) v.facing = facingToward(u.tile, tile);
-  v.pose = 0; await wait(160); v.pose = 1; await wait(320); v.pose = 2;
+  if (sk.target !== "self") { v.pose = 0; await wait(160); v.pose = 1; await wait(320); v.pose = 2; }
   const apply = () => {
     const r = B.cast(b, u, id, tile);
     let back = false;
@@ -332,18 +399,17 @@ async function castAnim(u, id, tile) {
       const ve = vis.get(e.unit.id), [x, y] = unitPos(e.unit), hy = y - FY + 1 + spriteOf(e.unit, "SE", 0, null).top - 10;
       ve.hp = e.unit.hp;
       if (e.kind === "heal") floats.push({ text: `+${e.amount}`, x, y: hy, color: "#a4e08a", size: 12, t0: clock, dur: 1100 });
-      else {
-        ve.flash = clock + 90; flinch(e.unit, feetOf(...tile)); back ||= e.side === "back";
-        floats.push({ text: String(e.amount), x, y: hy, color: "#fbf2dc", size: 12, t0: clock, dur: 1000 });
-        if (e.side !== "front") floats.push({ text: e.side.toUpperCase() + "!", x, y: hy - 11, color: SIDE_COLOR[e.side], size: 8, t0: clock, dur: 1000 });
-      }
+      else if (e.kind === "status") floats.push({ text: B.STATUSES[e.id].name.toUpperCase(), x, y: hy, color: STATUS_COLOR[e.id] ?? "#ead6b0", size: 8, t0: clock, dur: 1100 });
+      else { showHit(e.unit, e, feetOf(...tile)); back ||= e.side === "back"; }
     }
     if (r.effects.some((e) => e.kind === "damage")) hitStop(back ? 170 : 130);
     log(); refresh();
     return r;
   };
   let r;
-  if (sk.target === "tile") {
+  if (sk.target === "self") { // a stance, not a spell: straight into the guard
+    v.pose = "block:1"; await wait(160); v.pose = "block:0"; r = apply(); await wait(380);
+  } else if (sk.target === "tile") {
     const [fx, fy] = feetOf(...tile), flight = flyTo(u, [fx, fy - 12], "spell");
     await wait(200); v.pose = 3;
     await flight; spawnFx(id, tile, null); r = apply(); await wait(650);
@@ -406,14 +472,19 @@ async function attack() {
 }
 // skills: a submenu, then an aim. Heal picks an ally (most hurt first); Fireball aims at a tile with the pad.
 function startSkills() { ui.mode = "skills"; refresh(); }
-const healList = () => B.skillTargets(b, ui.sel, ui.skill).sort((p, q) => q.maxHp - q.hp - (p.maxHp - p.hp));
-const skillAim = () => (B.SKILLS[ui.skill].target === "ally" ? ui.target?.tile : ui.cursor);
-const aimOk = () => { const t = skillAim(); return !!t && B.inSkillRange(ui.skill, ui.sel.tile, t) && (B.SKILLS[ui.skill].target !== "ally" || !!ui.target); };
+// allies to aim at: the most hurt first for a heal, the most threatened first for a protective status
+const healList = () => {
+  const list = B.skillTargets(b, ui.sel, ui.skill), heal = B.SKILLS[ui.skill].ops.some((o) => o.op === "heal");
+  return list.sort((p, q) => (heal ? q.maxHp - q.hp - (p.maxHp - p.hp) : B.threatOn(b, q) - B.threatOn(b, p)));
+};
+const unitAim = () => B.SKILLS[ui.skill].target !== "tile";
+const skillAim = () => (unitAim() ? ui.target?.tile : ui.cursor);
+const aimOk = () => { const t = skillAim(); return !!t && B.inSkillRange(ui.skill, ui.sel.tile, t) && (!unitAim() || !!ui.target); };
 function aimScore(p) { return p.effects.reduce((a, e) => a + (e.kind === "heal" ? e.amount : e.ally ? -2 * e.amount : e.amount + (e.kills ? 50 : 0)), 0); }
 const foesInSkillRange = () => B.foesOf(b, ui.sel).filter((f) => B.inSkillRange(ui.skill, ui.sel.tile, f.tile));
 function startSkill(id) {
   ui.skill = id; ui.mode = "skill"; ui.target = null;
-  if (B.SKILLS[id].target === "ally") { ui.target = healList()[0] ?? null; ui.cursor = [...(ui.target ?? ui.sel).tile]; }
+  if (unitAim()) { ui.target = healList()[0] ?? null; ui.cursor = [...(ui.target ?? ui.sel).tile]; }
   else {
     let best = null, bs = -Infinity;
     for (const t of B.skillTiles(id, ui.sel.tile)) { const sc = aimScore(B.skillPreview(b, ui.sel, id, t)); if (sc > bs) { bs = sc; best = t; } }
@@ -422,7 +493,7 @@ function startSkill(id) {
   refresh();
 }
 function cycleAim(d) {
-  if (B.SKILLS[ui.skill].target === "ally") { const l = healList(), i = l.indexOf(ui.target); ui.target = l[(i + d + l.length) % l.length]; ui.cursor = [...ui.target.tile]; }
+  if (unitAim()) { const l = healList(), i = l.indexOf(ui.target); ui.target = l[(i + d + l.length) % l.length]; ui.cursor = [...ui.target.tile]; }
   else { const l = foesInSkillRange(), i = l.findIndex((f) => B.same(f.tile, ui.cursor)); if (l.length) ui.cursor = [...l[(i + d + l.length) % l.length].tile]; }
   refresh();
 }
@@ -474,9 +545,9 @@ function click(t) {
     else if (foeInRange) startTarget(u);
     else { ui.cursor = t; refresh(); }
   } else if (mode === "skill") {
-    if (B.SKILLS[ui.skill].target === "ally") {
+    if (unitAim()) {
       if (u && u === ui.target) castSkill();
-      else if (u && u.team === sel.team && B.inSkillRange(ui.skill, sel.tile, u.tile)) { ui.target = u; ui.cursor = [...t]; refresh(); }
+      else if (u && healList().includes(u)) { ui.target = u; ui.cursor = [...t]; refresh(); }
     } else if (B.same(t, ui.cursor) && aimOk()) castSkill();
     else { ui.cursor = t; refresh(); }
   } else if (mode === "face") { if (!B.same(t, sel.tile)) setFacing(facingToward(sel.tile, t)); done(); }
@@ -536,7 +607,7 @@ function unitCard(u) {
   const v = vis.get(u.id), status = !u.alive ? "DOWN" : u.done ? "DONE THIS TURN" : u.team === b.phase ? "READY" : "WAITING";
   info.innerHTML = `<div class="uname"></div><div class="team ${u.team}"></div>
     <div class="hp ${u.team}" role="img" aria-label="Health ${v.hp} of ${u.maxHp}"><i style="width:${(100 * v.hp) / u.maxHp}%"></i></div>
-    <div class="stats"><span>HEALTH</span><b>${v.hp} / ${u.maxHp}</b>${u.maxMp ? `<span>MP</span><b>${u.mp} / ${u.maxMp}</b>` : ""}<span>ATTACK</span><b>${u.atk}</b><span>ARMOUR</span><b>${u.def}${u.block ? ` + shield ${u.block}` : ""}</b><span>RESIST</span><b>${u.res}</b><span>MOVE</span><b>${u.move}</b><span>RANGE</span><b>${rangeText(u)}</b>${u.skills.length ? `<span>SKILLS</span><b>${u.skills.map((id) => `${B.SKILLS[id].name} (${B.SKILLS[id].mp} MP)`).join(", ")}</b>` : ""}<span>FACING</span><b>${v.facing ?? u.facing}</b><span>STATUS</span><b>${status}</b></div>`;
+    <div class="stats"><span>HEALTH</span><b>${v.hp} / ${u.maxHp}</b>${u.maxMp ? `<span>MP</span><b>${u.mp} / ${u.maxMp}</b>` : ""}<span>ATTACK</span><b>${u.atk}</b><span>ARMOUR</span><b>${B.armourOf(u)}${u.block ? ` + shield ${u.block}` : ""}</b>${u.blockChance ? `<span>BLOCK</span><b>${B.blockChanceOf(u, "front")}% front · ${B.blockChanceOf(u, "side")}% side</b>` : ""}<span>RESIST</span><b>${u.res}</b><span>MOVE</span><b>${u.move}</b><span>RANGE</span><b>${rangeText(u)}</b>${u.skills.length ? `<span>SKILLS</span><b>${u.skills.map((id) => `${B.SKILLS[id].name} (${B.SKILLS[id].mp} MP)`).join(", ")}</b>` : ""}<span>FACING</span><b>${v.facing ?? u.facing}</b><span>STATUS</span><b>${status}</b>${u.statuses.map((st) => `<span style="color:${STATUS_COLOR[st.id]}">${B.STATUSES[st.id].name.toUpperCase()}</span><b>${st.left !== undefined ? `${st.left} left · ` : ""}${st.turns === 1 ? "until its next turn" : `${st.turns} turns`}</b>`).join("")}</div>`;
   info.querySelector(".uname").textContent = u.name;
   info.querySelector(".team").textContent = `${u.className.toUpperCase()} · ${u.gear.toUpperCase()} · ${u.team === "player" ? "YOUR TEAM" : "ENEMY"}`;
   box.replaceChildren(c, info);
@@ -550,22 +621,29 @@ function previewCard() {
   $("previewCard").hidden = !t;
   if (!t) return;
   const p = B.preview(b, sel, t);
-  $("preview").innerHTML = `<div class="big">${p.dmg} damage</div>
+  $("preview").innerHTML = `<div class="big">${p.lost} damage</div>
     <div>${sel.name} → <b class="tn"></b>, from the <b class="side-${p.side}">${p.side.toUpperCase()}</b> (×${p.mult})</div>
     <div>Attack ${sel.atk} × ${p.mult} = ${+p.raw.toFixed(2)}, lowered by defence ${p.def}${t.block ? ` (armour ${t.def} + shield ${+(p.def - t.def).toFixed(1)})` : ""}</div>
+    ${p.absorbed ? `<div><b style="color:#ffd25e">Aegis absorbs ${p.absorbed}</b> of ${p.dmg}</div>` : ""}
+    ${p.block ? `<div><b class="side-side">${+p.block.toFixed(1)}% chance to be blocked</b> (no damage)</div>` : ""}
     <div>Health ${p.hp} → ${p.after}${p.kills ? " · <b class='side-back'>DEFEATS THE UNIT</b>" : ""}</div>`;
   $("preview").querySelector(".tn").textContent = t.name;
 }
 function skillCard() {
   const sk = B.SKILLS[ui.skill], el = $("preview");
   $("previewCard").hidden = false;
-  const head = `<div class="big">${sk.name}</div><div>${sk.mp} MP · ${ui.sel.name}: MP ${ui.sel.mp} → ${ui.sel.mp - sk.mp}</div>`;
+  const head = `<div class="big">${sk.name}</div><div>${sk.mp ? `${sk.mp} MP · ${ui.sel.name}: MP ${ui.sel.mp} → ${ui.sel.mp - sk.mp}` : "No MP cost"}</div>`;
   if (!aimOk()) { el.innerHTML = head + "<div>The aim is out of range.</div>"; return; }
   const p = B.skillPreview(b, ui.sel, ui.skill, skillAim());
   el.innerHTML = head + (p.effects.length ? "" : "<div>No unit is in the area.</div>");
   for (const e of p.effects) {
     const d = document.createElement("div");
+    const turns = e.turns === 1 ? "until its next turn" : `for ${e.turns} turns`;
+    const what = e.id === "ward" ? `armour ${B.armourOf(e.unit)} → ${B.armourOf(e.unit) + B.STATUSES.ward.mods.def}`
+      : e.id === "brace" ? `block ${B.blockChanceOf(e.unit, "front")}% → ${Math.min(B.BLOCK_CAP, B.blockChanceOf(e.unit, "front") * 2)}% front, ${B.blockChanceOf(e.unit, "side")}% → ${B.blockChanceOf(e.unit, "side") * 2}% side`
+      : e.id === "aegis" ? `absorbs the next ${e.absorb} damage` : "";
     d.innerHTML = e.kind === "heal" ? `<b class="nm"></b>: <b style="color:#a4e08a">+${e.amount} HP</b> · ${e.hp} → ${e.after}`
+      : e.kind === "status" ? `<b class="nm"></b>: <b style="color:${STATUS_COLOR[e.id]}">${B.STATUSES[e.id].name}</b>, ${what}, ${turns}`
       : `<b class="nm"></b>${e.ally ? " <b class='side-back'>(YOUR UNIT)</b>" : ""}: ${e.amount} damage, <b class="side-${e.side}">${e.side.toUpperCase()}</b>, ${e.magic ? "resist" : "defence"} ${e.def} · ${e.hp} → ${e.after}${e.kills ? " · <b class='side-back'>DOWN</b>" : ""}`;
     d.querySelector(".nm").textContent = e.unit.name; el.append(d);
   }
@@ -593,8 +671,10 @@ function refresh() {
   $("turn").innerHTML = `Round ${b.round} · <span class="ph ${b.phase}">${b.phase === "player" ? "Player phase" : "Enemy phase"}</span>`;
   let help = HELP[mode] ?? "";
   if (mode === "menu" && sel?.moved && !B.targets(b, sel).length) help = "No enemy is in range from here. Wait to select a facing, or undo the move.";
-  if (mode === "skill") help = B.SKILLS[ui.skill].target === "ally"
-    ? "Select the ally to heal with Previous and Next, or tap one in the green area. Then Cast."
+  if (mode === "skill") help = B.SKILLS[ui.skill].target === "self"
+    ? `${B.SKILLS[ui.skill].name} acts on this unit only. Select it to use it, or Back.`
+    : unitAim()
+    ? "Select the ally with Previous and Next, or tap one in the green area. Then Cast."
     : "Aim with the pad, Previous and Next, or a tap in the red area. The orange tiles show the area: it hits your own units too. Then Cast.";
   if (mode === "move" && !moveNode()) help = "The cursor is not on a blue tile. Move it with the arrows, or tap a blue tile.";
   $("help").textContent = ui.busy && mode !== "enemy" ? "" : help;
@@ -605,7 +685,7 @@ function refresh() {
     if (mode === "menu") {
       const n = sel.acted ? 0 : B.targets(b, sel).length;
       row.append(chip("Move", startMove, { disabled: sel.moved }), chip(n ? `Attack · ${n} in range` : "Attack", () => startTarget(), { disabled: !n }),
-        ...(sel.skills.length ? [chip(`Skills · ${sel.mp} MP`, startSkills, { disabled: sel.acted || !sel.skills.some((id) => B.canCast(sel, id)) })] : []),
+        ...(sel.skills.length ? [chip(sel.maxMp ? `Skills · ${sel.mp} MP` : "Skills", startSkills, { disabled: sel.acted || !sel.skills.some((id) => B.canCast(sel, id)) })] : []),
         chip("Wait", startFacing), sel.moved ? chip("Undo move", undoMove) : chip("Cancel", deselect));
       if (!sel.moved && b.units.filter(ready).length > 1) row.append(chip("Next unit", nextUnit));
     }
@@ -614,15 +694,15 @@ function refresh() {
       a.push(row, pad("Move the cursor", (f) => moveCursor(FACING_DIR[f]), "Move here", moveNode() ? () => moveTo(moveNode()) : null));
     }
     if (mode === "skills") {
-      row.append(...sel.skills.map((id) => chip(`${B.SKILLS[id].name} · ${B.SKILLS[id].mp} MP`, () => startSkill(id), { disabled: !B.canCast(sel, id) })), chip("Back", toMenu));
+      row.append(...sel.skills.map((id) => { const k = B.SKILLS[id]; return chip(`${k.name}${k.mp ? ` · ${k.mp} MP` : ""}${k.needs === "shield" && !sel.blockChance ? " · needs a shield" : ""}`, () => startSkill(id), { disabled: !B.canCast(sel, id) }); }), chip("Back", toMenu));
     }
     if (mode === "skill") {
-      const sk = B.SKILLS[ui.skill], many = (sk.target === "ally" ? healList() : foesInSkillRange()).length > 1;
-      const word = sk.target === "ally" ? "" : " foe";
+      const sk = B.SKILLS[ui.skill], many = (unitAim() ? healList() : foesInSkillRange()).length > 1;
+      const word = unitAim() ? "" : " foe";
       row.append(chip(`◀ Previous${word}`, () => cycleAim(-1), { disabled: !many }), chip(`Next${word} ▶`, () => cycleAim(1), { disabled: !many }));
-      if (sk.target === "ally") row.append(chip(`Cast ${sk.name}`, castSkill, { main: true, disabled: !aimOk() }));
+      if (unitAim()) row.append(chip(sk.target === "self" ? sk.name : `Cast ${sk.name}`, castSkill, { main: true, disabled: !aimOk() }));
       row.append(chip("Back", back));
-      if (sk.target !== "ally") a.push(row, pad("Aim the skill", (f) => moveCursor(FACING_DIR[f]), `Cast ${sk.name}`, aimOk() ? castSkill : null));
+      if (!unitAim()) a.push(row, pad("Aim the skill", (f) => moveCursor(FACING_DIR[f]), `Cast ${sk.name}`, aimOk() ? castSkill : null));
     }
     if (mode === "target") {
       const many = targetList().length > 1;
