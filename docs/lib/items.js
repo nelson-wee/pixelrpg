@@ -6,10 +6,10 @@
 // block (shield defence: full from the front, half from the side, none from the back),
 // blockChance (a shield's chance in % to block a hit outright: full from the front, half from the side, never from the back).
 // A weapon also sets the basic attack: range [min, max], line (straight-line reach), projectile ("arrow", "spell"
-// or none). hands: 2 means the item needs both hands (a two-handed weapon, or a bow in the off hand).
+// or none), damage ("magic" for a magic bolt: resist lowers it instead of armour; physical when not set). hands: 2 means the item needs both hands (a two-handed weapon, or a bow in the off hand).
 
 const A = (range, extra = {}) => ({ range, ...extra });
-const MELEE = A([1, 1]), REACH = A([1, 2], { line: true }), BOLT = A([2, 3], { projectile: "spell" });
+const MELEE = A([1, 1]), REACH = A([1, 2], { line: true }), BOLT = A([2, 3], { projectile: "spell", damage: "magic" });
 
 // armour: cloth gives resist and MP, leather 1-2 DEF a piece, chain 2-3, plate 3-4 (the chest gives the most)
 export const ITEMS = {
@@ -51,7 +51,7 @@ export const ITEMS = {
     rod: { atk: 0, mp: 2, attack: BOLT }, staff: { atk: 1, mp: 2, attack: BOLT }, froststaff: { atk: 2, mp: 2, attack: BOLT },
   },
   off: {
-    shield: { block: 3, blockChance: 30 }, buckler: { block: 1, blockChance: 15 }, maingauche: { atk: 1, block: 1, blockChance: 10 },
+    shield: { block: 3, blockChance: 30 }, buckler: { block: 1, blockChance: 20 }, maingauche: { atk: 1, block: 1, blockChance: 10 },
     dagger: { atk: 1 }, shadowdagger: { atk: 1 }, offsword: { atk: 2 }, offmace: { atk: 2 },
     tome: { res: 1, mp: 2 },
     shortbow: { atk: 1, hands: 2, attack: A([2, 3], { projectile: "arrow" }) },
@@ -83,7 +83,7 @@ export function clears(slot, id, lo) {
 export function basicAttack(lo) {
   const w = worn(lo), off = itemOf("off", w.off), main = itemOf("main", w.main);
   const a = off?.attack ?? main?.attack ?? UNARMED, weapon = off?.attack ? w.off : main?.attack ? w.main : null;
-  return { range: [...a.range], line: !!a.line, projectile: a.projectile ?? null, weapon };
+  return { range: [...a.range], line: !!a.line, projectile: a.projectile ?? null, damage: a.damage ?? "physical", weapon };
 }
 /** The total of every stat the worn pieces give. */
 export function gearStats(lo) {
@@ -97,6 +97,7 @@ export function itemText(slot, id) {
   const it = itemOf(slot, id); if (!it) return "";
   const parts = STAT_KEYS.filter((k) => it[k]).map((k) => `+${it[k]}${k === "blockChance" ? "%" : ""} ${LABEL[k]}`);
   if (it.attack && (it.attack.range[1] > 1)) parts.push(it.attack.line ? `reach ${it.attack.range[0]}–${it.attack.range[1]}` : `range ${it.attack.range[0]}–${it.attack.range[1]}`);
+  if (it.attack?.damage === "magic") parts.push("magic");
   if (it.hands === 2) parts.push("2H");
   return parts.join(" ");
 }

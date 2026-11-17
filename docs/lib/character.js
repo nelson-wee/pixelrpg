@@ -26,7 +26,7 @@ export function deriveStats(def) {
   const b = ARCHETYPES[def.archetype].base, g = gearStats(def.look?.loadout ?? {}), atk = basicAttack(def.look?.loadout ?? {});
   const stats = {
     hp: b.hp + g.hp, mp: (b.mp ?? 0) + g.mp, atk: b.atk + g.atk, def: g.def, res: g.res, block: g.block, blockChance: g.blockChance, move: b.move,
-    range: atk.range, line: atk.line, projectile: atk.projectile, weapon: atk.weapon,
+    range: atk.range, line: atk.line, projectile: atk.projectile, damage: atk.damage, weapon: atk.weapon,
   };
   // milestone 3: each talent in def.talents adds its stat changes here
   return stats;

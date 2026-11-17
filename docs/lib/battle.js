@@ -39,7 +39,7 @@ export const PROPS = { "1,10": "oak", "9,6": "oak", "10,1": "pine", "1,4": "bann
 export const SKILLS = {
   heal: { name: "Heal", mp: 6, range: [0, 3], target: "ally", ops: [{ op: "heal", amount: 14 }] },
   fireball: { name: "Fireball", mp: 8, range: [2, 4], target: "tile", area: "plus", friendly: true, ops: [{ op: "damage", power: 10, magic: true, element: "fire" }] },
-  arcaneWard: { name: "Arcane Ward", mp: 6, range: [0, 2], target: "ally", ops: [{ op: "status", id: "ward", turns: 2 }] },
+  arcaneWard: { name: "Arcane Ward", mp: 6, range: [0, 0], target: "self", ops: [{ op: "status", id: "ward", turns: 2 }] },
   brace: { name: "Brace", mp: 0, range: [0, 0], target: "self", needs: "shield", ops: [{ op: "status", id: "brace", turns: 1 }] },
   aegis: { name: "Aegis", mp: 6, range: [0, 3], target: "ally", ops: [{ op: "status", id: "aegis", turns: 3, absorb: 12 }] },
 };
@@ -57,10 +57,11 @@ export const SIDE_MULT = { front: 1, side: 1.25, back: 1.5 };
 // Defence: damage = max(1, round(raw x K / (K + D))). Each point of D adds the same effective health (HP x (1 + D/K)),
 // it never reaches zero damage, and stacking stays safe. raw = attack (or skill power) x the side multiplier.
 // D is armour plus the shield's value, which counts fully from the front, half from the side and not from the back.
-// Magic uses resist instead of armour and shields.
+// Damage types: physical damage is lowered by armour and the shield's value; magic damage (a staff's bolt, Fireball)
+// by resist instead. The side multiplier, the block roll and absorb shields work the same for both.
 // A shield also gives a chance to block a hit outright (no damage): full from the front, half from the side, never
-// from the back, never against magic.
-export const DEF_K = 20, BLOCK_CAP = 75;
+// from the back.
+export const DEF_K = 20, BLOCK_CAP = 80;
 export const SHIELD_SIDE = { front: 1, side: 0.5, back: 0 };
 export const mitigate = (raw, d) => Math.max(1, Math.round((raw * DEF_K) / (DEF_K + Math.max(0, d))));
 const modSum = (u, k) => (u.statuses ?? []).reduce((a, s) => a + (STATUSES[s.id].mods?.[k] ?? 0), 0);
@@ -69,12 +70,12 @@ export const armourOf = (t) => t.def + modSum(t, "def");
 export const defenceOf = (t, side) => armourOf(t) + t.block * SHIELD_SIDE[side];
 // earmarked: resistances per element (fire, frost, storm, holy, shadow) will replace the one generic resist
 export const resistOf = (t, element) => t.res + modSum(t, "res");
-export const blockChanceOf = (t, side, magic = false) => (magic ? 0 : Math.min(BLOCK_CAP, (t.blockChance ?? 0) * modMul(t, "blockMult") * SHIELD_SIDE[side]));
+export const blockChanceOf = (t, side) => Math.min(BLOCK_CAP, (t.blockChance ?? 0) * modMul(t, "blockMult") * SHIELD_SIDE[side]);
 export const absorbOf = (t) => (t.statuses ?? []).reduce((a, s) => a + (STATUSES[s.id].absorb ? s.left : 0), 0);
 export const hasStatus = (t, id) => (t.statuses ?? []).some((s) => s.id === id);
 // one hit on a unit: its defence, the damage, the chance to block it, and what an absorb shield would take
 function hitOn(t, raw, side, magic, element) {
-  const def = magic ? resistOf(t, element) : defenceOf(t, side), dmg = mitigate(raw, def), block = blockChanceOf(t, side, magic);
+  const def = magic ? resistOf(t, element) : defenceOf(t, side), dmg = mitigate(raw, def), block = blockChanceOf(t, side);
   const absorbed = Math.min(absorbOf(t), dmg), lost = dmg - absorbed;
   return { def, dmg, block, absorbed, lost, hp: t.hp, after: Math.max(0, t.hp - lost), kills: lost >= t.hp, expected: lost * (1 - block / 100) };
 }
@@ -128,7 +129,7 @@ export function placeUnit({ character, team, tile, facing }) {
     id: c.id, team, name: c.name, archetype: c.archetype, className: c.className, character: c,
     lo: { ...c.look.loadout }, body: { ...c.look.body }, gear: c.look.name, projectile: c.projectile,
     tile: [...tile], facing: facing ?? START_FACING[team],
-    hp: st.hp, maxHp: st.hp, atk: st.atk, def: st.def, res: st.res, block: st.block, blockChance: st.blockChance, move: st.move, range: [...st.range], line: st.line,
+    damage: st.damage ?? "physical", hp: st.hp, maxHp: st.hp, atk: st.atk, def: st.def, res: st.res, block: st.block, blockChance: st.blockChance, move: st.move, range: [...st.range], line: st.line,
     mp: st.mp, maxMp: st.mp, skills: [...c.skills], statuses: [],
     alive: true, moved: false, acted: false, done: false,
   };
@@ -198,8 +199,8 @@ export const targets = (b, u, from = u.tile) => foesOf(b, u).filter((f) => inRan
 // what an attack would do: the side it lands on (from the defender's facing), the multiplier, the defence, the
 // damage, the chance to block it and what an absorb shield would take. expected: the damage times the chance it lands.
 export function preview(b, u, t, from = u.tile) {
-  const side = attackSide(t.tile, t.facing, from), mult = SIDE_MULT[side], raw = u.atk * mult;
-  return { side, mult, raw, ...hitOn(t, raw, side, false) };
+  const side = attackSide(t.tile, t.facing, from), mult = SIDE_MULT[side], raw = u.atk * mult, magic = u.damage === "magic";
+  return { side, mult, raw, magic, ...hitOn(t, raw, side, magic) };
 }
 
 // ---------- skills ----------
@@ -223,7 +224,7 @@ export function skillTargets(b, u, id, from = u.tile) {
   return b.units.filter((a) => a.alive && a.team === u.team && inSkillRange(id, from, a.tile));
 }
 // what a skill would do: one entry per unit and operation. Damage uses the same front/side/back rule as attacks,
-// seen from the caster's tile; magic goes by resist and cannot be blocked.
+// seen from the caster's tile; magic goes by resist instead of armour.
 export function skillPreview(b, u, id, tile, from = u.tile) {
   const s = SKILLS[id], effects = [];
   let hit = [];
@@ -310,10 +311,10 @@ export const nearestFoe = (b, u, from = u.tile) => foesOf(b, u).sort((x, y) => d
 // Attacks and damage count what is expected to land: a shield's block chance lowers them.
 export function threatOn(b, a, extra = null) {
   return foesOf(b, a).filter((f) => dist(f.tile, a.tile) <= f.move + f.range[1]).map((f) => {
-    const raw = f.atk, side = "front", now = hitOn(a, raw, side, false), d0 = now.dmg * (1 - now.block / 100);
+    const raw = f.atk, side = "front", magic = f.damage === "magic", now = hitOn(a, raw, side, magic), d0 = now.dmg * (1 - now.block / 100);
     if (!extra) return d0;
     const was = a.statuses; a.statuses = [...was, extra];
-    const after = hitOn(a, raw, side, false); a.statuses = was;
+    const after = hitOn(a, raw, side, magic); a.statuses = was;
     return d0 - after.lost * (1 - after.block / 100);
   }).reduce((x, y) => x + y, 0);
 }

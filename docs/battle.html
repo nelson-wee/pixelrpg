@@ -178,11 +178,11 @@ footer { max-width: 1500px; margin: 0 auto; padding: 0 24px 40px; color: var(--d
       <div class="label">RULES</div>
       <ul class="rules">
         <li><b>Damage</b> = attack × side (<b>front</b> ×1, <b>side</b> ×1.25, <b>back</b> ×1.5), then lowered by defence: × 20 ÷ (20 + defence), at least 1.</li>
-        <li><b>Defence</b> = armour, plus the shield: fully from the front, half from the side, none from the back. <b>Magic</b> uses resist instead. Gear gives armour, resist, shields and the attack's range.</li>
-        <li><b>Block</b>: a shield can stop a hit outright (no damage). Kite shield 30% from the front, 15% from the side; never from the back, never against magic.</li>
+        <li><b>Defence</b> = armour, plus the shield: fully from the front, half from the side, none from the back. <b>Magic damage</b> (a staff's bolt, Fireball) uses resist instead; the side, block and absorb still count. Gear gives armour, resist, shields and the attack's range.</li>
+        <li><b>Block</b>: a shield can stop a hit outright (no damage). Kite shield 30% from the front, 15% from the side, buckler 20% and 10%; never from the back. At most 80%.</li>
         <li>A unit turns to its target when it attacks. When it moves, it faces the direction of its last step. A unit that is hit does not turn.</li>
         <li>Each turn, every unit can move once and act once: attack, or use a skill. Then it selects a facing.</li>
-        <li><b>Skills</b> use MP, which does not come back during the battle. <b>Heal</b> (cleric, 6 MP): one ally gets up to 14 HP. <b>Aegis</b> (cleric, 6 MP): a holy shield on one ally absorbs the next 12 damage (3 turns). <b>Fireball</b> (mage, 8 MP): 10 magic damage × side on the target tile and the 4 tiles next to it, your own units too. <b>Arcane Ward</b> (mage, 6 MP): +12 armour on one ally for 2 turns. <b>Brace</b> (knight, no MP, needs a shield): the block chance doubles until the knight's next turn.</li>
+        <li><b>Skills</b> use MP, which does not come back during the battle. <b>Heal</b> (cleric, 6 MP): one ally gets up to 14 HP. <b>Aegis</b> (cleric, 6 MP): a holy shield on one ally absorbs the next 12 damage (3 turns). <b>Fireball</b> (mage, 8 MP): 10 magic damage × side on the target tile and the 4 tiles next to it, your own units too. <b>Arcane Ward</b> (mage, 6 MP): +12 armour on the mage for 2 turns. <b>Brace</b> (knight, no MP, needs a shield): the block chance doubles until the knight's next turn.</li>
         <li>Water and props block movement. One step can go up or down 2 height levels at most.</li>
       </ul>
       <label class="toggle"><input type="checkbox" id="arcs" checked> Show the facing arcs of the unit under the cursor</label>

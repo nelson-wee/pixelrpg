@@ -78,7 +78,7 @@ export function createMuster({ party, onChange, onStart }) {
     const skills = c.skills.map((id) => `${SKILLS[id].name}${SKILLS[id].mp ? ` (${SKILLS[id].mp} MP)` : ""}`).join(", ") || "None";
     const kind = st.projectile === "arrow" ? "arrows" : st.projectile === "spell" ? "magic bolt" : st.line ? "reach" : "melee";
     $("musterStats").innerHTML = `<span>STANCE</span><b></b><span>HEALTH</span><b>${st.hp}</b>${st.mp ? `<span>MP</span><b>${st.mp}</b>` : ""}
-      <span>ATTACK</span><b>${st.atk}</b><span>RANGE</span><b>${rangeText(st.range, st.line)} · ${kind}</b>
+      <span>ATTACK</span><b>${st.atk}${st.damage === "magic" ? " magic" : ""}</b><span>RANGE</span><b>${rangeText(st.range, st.line)} · ${kind}</b>
       <span>ARMOUR</span><b>${st.def}</b><span>SHIELD</span><b>${st.block ? `${st.block} front · ${st.block / 2} side · 0 back` : "none"}</b>${st.blockChance ? `<span>BLOCK</span><b>${st.blockChance}% front · ${st.blockChance / 2}% side</b>` : ""}
       <span>RESIST</span><b>${st.res}</b><span>MOVE</span><b>${st.move}</b><span>SKILLS</span><b>${skills}</b>`;
     $("musterStats").querySelector("b").textContent = stanceName(lo);

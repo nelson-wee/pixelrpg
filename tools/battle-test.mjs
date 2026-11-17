@@ -146,7 +146,13 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
   k.facing = "NE"; assert.equal(B.preview(b, a, k).block, 30);
   k.facing = "SE"; assert.equal(B.preview(b, a, k).block, 15);
   k.facing = "SW"; assert.equal(B.preview(b, a, k).block, 0);
-  assert.equal(B.blockChanceOf(k, "front", true), 0, "magic cannot be blocked");
+  // a staff's bolt is magic: resist instead of armour and shield value, but the side and the block still count
+  const mb = B.newBattle(roster([["m", "player", "mage", "M", [5, 4]], ["k2", "enemy", "knight", "K2", [5, 6]]]));
+  const [mm, kk] = mb.units; kk.facing = "NE";
+  const bolt = B.preview(mb, mm, kk);
+  assert.equal(mm.damage, "magic"); assert.ok(bolt.magic); assert.equal(bolt.def, kk.res); assert.equal(bolt.block, 30); assert.equal(bolt.dmg, B.mitigate(mm.atk, kk.res));
+  kk.facing = "SW"; assert.equal(B.preview(mb, mm, kk).mult, 1.5, "the side multiplier applies to magic");
+  assert.equal(B.newBattle(roster([["a", "player", "archer", "A", [1, 1]]])).units[0].damage, "physical");
   k.facing = "NE";
   b.phase = "enemy"; assert.ok(B.canCast(k, "brace"));
   B.cast(b, k, "brace", k.tile);
@@ -157,6 +163,9 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
   let blocked = 0;
   for (let i = 0; i < 400; i++) { k.hp = k.maxHp; a.acted = false; a.tile = [5, 5]; const r = B.strike(b, a, k); if (r.blocked) { blocked++; assert.equal(k.hp, k.maxHp); } }
   assert.ok(blocked > 90 && blocked < 150, `blocked ${blocked} of 400`);
+  // the block limit is 80%; a buckler blocks 20%
+  const was = k.blockChance; k.blockChance = 100; assert.equal(B.preview(b, a, k).block, 80); k.blockChance = was;
+  const { ITEMS } = await import("../docs/lib/items.js"); assert.equal(ITEMS.off.buckler.blockChance, 20);
   // a knight with no shield cannot brace
   const nb = B.newBattle([{ character: { id: "g", name: "G", archetype: "knight", look: { loadout: { main: "greatsword" }, body: { type: "m" } } }, team: "player", tile: [1, 1] }]);
   assert.ok(!B.canCast(nb.units[0], "brace"));
@@ -166,6 +175,7 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
   const b = B.newBattle(roster([["m", "player", "mage", "M", [5, 5]], ["c", "player", "cleric", "C", [5, 6]], ["x", "enemy", "thief", "X", [6, 5]]]));
   const [m, c, x] = b.units;
   const before = B.preview(b, x, m).dmg;
+  assert.deepEqual(B.skillTargets(b, m, "arcaneWard").map((u) => u.id), ["m"], "Arcane Ward is for the mage only");
   B.cast(b, m, "arcaneWard", m.tile);
   assert.equal(B.armourOf(m), 12); assert.ok(B.preview(b, x, m).dmg < before);
   B.nextPhase(b); B.nextPhase(b); assert.ok(B.hasStatus(m, "ward"), "lasts through two enemy phases");
