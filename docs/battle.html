@@ -105,7 +105,7 @@ footer { max-width: 1500px; margin: 0 auto; padding: 0 24px 40px; color: var(--d
 <header>
   <div>
     <div class="eyebrow">PIXELRPG · <a href="./index.html">WARDROBE</a> · BATTLE DEMO</div>
-    <h1>Battle at the river</h1>
+    <h1 id="arenaTitle">Battle demo</h1>
   </div>
   <p>Six characters against six. The enemies use the same archetypes, with other gear. Before each battle, change your party's gear. In battle, facing counts: hit a unit from the side for ×1.25 damage, or from the back for ×1.5.</p>
 </header>
@@ -115,6 +115,7 @@ footer { max-width: 1500px; margin: 0 auto; padding: 0 24px 40px; color: var(--d
       <div class="label">BEFORE THE BATTLE</div>
       <h2 class="mtitle">Prepare your party</h2>
     </div>
+    <div class="row" id="musterArena" role="group" aria-label="Arena"></div>
     <div class="row">
       <button class="chip" type="button" id="musterReset">Reset party</button>
       <button class="chip main" type="button" id="musterStart">Start battle →</button>

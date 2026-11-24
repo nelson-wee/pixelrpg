@@ -6,28 +6,17 @@
 import { FACING_DIR, facingToward, attackSide } from "./pixelrpg.js";
 import { makeCharacter } from "./character.js";
 import { presetLook } from "./presets.js";
+import { MAPS } from "./maps.js";
 
-// ---------- the demo map: the same ground as sprites/art/battle-map.png ----------
-export const N = 11;
-const hill = (i, j) => {
-  if (j >= 5 && j <= 6 && i > 1) return 0; // river bed
-  if (i <= 2 && j <= 3) return 4;
-  if (i <= 3 && j <= 4) return 3;
-  if (i >= 8 && j >= 8) return 2;
-  if (i >= 7 && j <= 2) return 2;
-  return 1;
-};
-export function terrain(i, j) {
-  if (j >= 5 && j <= 6 && i > 1) return i === 5 ? "wood" : "water";
-  if (i <= 3 && j <= 4) return hill(i, j) === 4 ? "cobble" : "moss";
-  if ((j === 4 && i > 3) || (i === 5 && j > 6)) return "dirt";
-  if (i >= 8 && j >= 8) return "snow";
-  if (i >= 7 && j <= 2) return "sand";
-  return "grass";
-}
-// height in steps of 12 px; the bridge planks sit one step up
-export const height = (i, j) => (terrain(i, j) === "wood" ? 1 : hill(i, j));
-export const PROPS = { "1,10": "oak", "9,6": "oak", "10,1": "pine", "1,4": "banner", "8,9": "pine", "10,9": "pine", "6,10": "rock", "4,10": "bush", "3,3": "crystal", "9,0": "crate", "0,0": "chest", "6,2": "bush" };
+// ---------- the map: the battle's arena (docs/lib/maps.js) ----------
+// One battle runs at a time, so the rules read the active map; newBattle() sets it.
+let MAP = MAPS.river;
+export let N = MAP.n;
+export const mapOf = () => MAP;
+export function useMap(id) { MAP = MAPS[id] ?? MAPS.river; N = MAP.n; return MAP; }
+export const terrain = (i, j) => MAP.terrain(i, j);
+export const height = (i, j) => MAP.height(i, j);
+export const propAt = (t) => MAP.props[`${t[0]},${t[1]}`];
 
 // ---------- units ----------
 // Skills: a second kind of action. A skill uses MP and takes the unit's action for the turn, like an attack.
@@ -112,13 +101,14 @@ export const DEMO_FOES = [
   member("e-knight", "Vexa", "knight", 1, true), member("e-lancer", "Ilsa", "lancer", 1, true), member("e-thief", "Nyx", "thief", 1, true),
   member("e-archer", "Hal", "archer", 1, true), member("e-mage", "Oren", "mage", 1, true), member("e-cleric", "Tobin", "cleric", 1, true),
 ];
-// where each character starts: { character, team, tile, facing? }
-const PARTY_TILES = [[4, 7], [2, 7], [6, 7], [1, 8], [3, 9], [5, 8]], FOE_TILES = [[5, 3], [7, 3], [8, 2], [1, 2], [2, 1], [5, 1]];
-/** The demo battle with a party of six (by default the demo party) against the demo foes. */
-export const demoRoster = (party = DEMO_PARTY) => [
-  ...party.map((character, i) => ({ character, team: "player", tile: PARTY_TILES[i] })),
-  ...DEMO_FOES.map((character, i) => ({ character, team: "enemy", tile: FOE_TILES[i] })),
-];
+/** The demo battle on a map (its start tiles): a party of six (by default the demo party) against the demo foes. */
+export const demoRoster = (party = DEMO_PARTY, mapId = "river") => {
+  const m = MAPS[mapId] ?? MAPS.river;
+  return [
+    ...party.map((character, i) => ({ character, team: "player", tile: m.party[i] })),
+    ...DEMO_FOES.map((character, i) => ({ character, team: "enemy", tile: m.foes[i] })),
+  ];
+};
 export const DEMO_ROSTER = demoRoster();
 export const START_FACING = { player: "NE", enemy: "SW" };
 
@@ -134,8 +124,9 @@ export function placeUnit({ character, team, tile, facing }) {
     alive: true, moved: false, acted: false, done: false,
   };
 }
-export function newBattle(roster = DEMO_ROSTER, { seed = 1 } = {}) {
-  return { round: 1, phase: "player", units: roster.map(placeUnit), log: [], rng: seed | 0 };
+export function newBattle(roster = DEMO_ROSTER, { seed = 1, map = "river" } = {}) {
+  useMap(map);
+  return { round: 1, phase: "player", map: MAP === MAPS[map] ? map : "river", units: roster.map(placeUnit), log: [], rng: seed | 0 };
 }
 
 // ---------- grid helpers ----------
@@ -143,7 +134,7 @@ export const key = (t) => `${t[0]},${t[1]}`;
 export const same = (a, b) => a[0] === b[0] && a[1] === b[1];
 export const dist = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
 export const inside = ([i, j]) => i >= 0 && j >= 0 && i < N && j < N;
-export const walkable = (t) => inside(t) && terrain(...t) !== "water" && !PROPS[key(t)];
+export const walkable = (t) => inside(t) && terrain(...t) !== "water" && !propAt(t);
 export const unitAt = (b, t) => b.units.find((u) => u.alive && same(u.tile, t));
 const STEPS = Object.entries(FACING_DIR); // [facing, [dcol, drow]]
 export const stepFacing = (from, to) => STEPS.find(([, [dc, dr]]) => to[0] - from[0] === dc && to[1] - from[1] === dr)?.[0];

@@ -1,12 +1,17 @@
 // Battle demo: draws the demo map and both teams live with the sprite core, and runs the rules in lib/battle.js.
 import { TW, TH, STEP, HW, HH, FX, FY, Img, tile, cursor, prop, drawUnit, setCell, stanceOf, FACING_DIR, facingToward, attackSide, TEAM_SCHEMES } from "./lib/pixelrpg.js";
 import * as B from "./lib/battle.js";
+import { MAPS } from "./lib/maps.js";
+import { drawWalls, gothicProp, lightShafts } from "./lib/gothic.js";
 import { actorFrom } from "./lib/gearfx.js";
 import * as P from "./lib/party.js";
 import { createMuster } from "./muster.js";
 
 const $ = (id) => document.getElementById(id);
-const N = B.N, W = N * TW + HW, H = N * TH + 6 * STEP + 76, OX = N * HW - HW + 8, OY = 60;
+// the picture's geometry follows the arena: its size, and the room above the grid for its walls
+let N = B.N, W = 0, H = 0, OX = 0, OY = 60;
+function setGeometry(m) { N = m.n; OY = m.top ?? 60; OX = N * HW - HW + 8; W = N * TW + HW; H = N * TH + 6 * STEP + 76 + (OY - 60); }
+setGeometry(B.mapOf());
 const ATTACK_MS = [220, 320, 200, 350];           // ready, wind-up, strike, follow-through
 const STEP_MS = 170, ARROW_PX = 360, SPELL_PX = 240; // 24 and 16 px per frame at 15 fps
 const TEAM = { player: { ring: "#8cc4f0", bar: "#6ab0e8" }, enemy: { ring: "#f08a6e", bar: "#e0604e" } };
@@ -31,7 +36,16 @@ function tileOf(i, j, mark = null) {
   return tiles.get(k);
 }
 const props = new Map();
-const propOf = (kind) => { if (!props.has(kind)) props.set(kind, toCanvas(prop(kind))); return props.get(kind); };
+const propOf = (kind) => { if (!props.has(kind)) { const img = gothicProp(kind) ?? prop(kind); props.set(kind, { c: toCanvas(img), h: img.h }); } return props.get(kind); };
+// the arena's back walls (one picture, drawn before the tiles) and its shafts of window light
+let walls = null, shafts = [];
+function buildArena() {
+  const m = B.mapOf();
+  tiles.clear(); walls = null; shafts = [];
+  if (m.walls) { const img = new Img(W, H); drawWalls(img, OX + HW, OY + 5 * STEP, N, m.walls); walls = toCanvas(img); }
+  if (m.lights) shafts = lightShafts(m.lights, OX + HW, OY + 5 * STEP, (i, j) => B.height(i, j));
+  const t = $("arenaTitle"); if (t) t.textContent = m.name;
+}
 const cursorC = (() => { const img = new Img(TW, TH); cursor(img, 0, 0); return toCanvas(img); })();
 // team ring at the feet, with a small wedge that points where the unit faces
 const DIAG = { SE: [1, 1], SW: [-1, 1], NW: [-1, -1], NE: [1, -1] };
@@ -169,7 +183,8 @@ const hitStop = (ms) => { stopUntil = performance.now() + ms; };
 // ---------- state ----------
 let b, vis, ui, floats, shots, effects = [];
 function reset() {
-  b = B.newBattle(B.demoRoster(party), { seed: (Math.random() * 2 ** 31) | 0 }); // a new seed each battle (block rolls)
+  b = B.newBattle(B.demoRoster(party, arena), { seed: (Math.random() * 2 ** 31) | 0, map: arena }); // a new seed each battle (block rolls)
+  setGeometry(B.mapOf()); buildArena(); fit();
   vis = new Map(b.units.map((u) => [u.id, { pos: null, depth: null, facing: null, pose: null, flash: 0, gone: false, blink: false, hp: u.hp }]));
   ui = { mode: "idle", sel: null, target: null, from: null, reach: null, hover: null, cursor: [4, 7], busy: false, info: null };
   floats = []; shots = []; effects = []; statusFx.clear();
@@ -223,6 +238,7 @@ function draw() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = "#120c18"; ctx.fillRect(0, 0, cv.width, cv.height);
   ctx.setTransform(Z, 0, 0, Z, 0, 0); ctx.imageSmoothingEnabled = false;
+  if (walls) ctx.drawImage(walls, 0, 0);
   const marks = marksNow(), byDepth = new Map();
   for (const u of b.units) {
     const v = vis.get(u.id); if (v.gone) continue;
@@ -234,7 +250,7 @@ function draw() {
     const k = `${i},${j}`, [tx, ty] = tileTop(i, j);
     ctx.drawImage(tileOf(i, j, marks.get(k) ?? null).c, tx, ty);
     if ((cur && B.same(cur, [i, j])) || ((ui.mode === "move" || ui.mode === "target" || ui.mode === "skill") && B.same(ui.cursor, [i, j])) || (ui.sel && B.same(ui.sel.tile, [i, j]) && ui.mode !== "enemy")) ctx.drawImage(cursorC, tx, ty);
-    if (B.PROPS[k]) ctx.drawImage(propOf(B.PROPS[k]), tx + HW - 20, ty + HH - 48);
+    const pk = B.propAt([i, j]); if (pk) { const p = propOf(pk); ctx.drawImage(p.c, tx + HW - 20, ty + HH - (p.h - 8)); }
     const here = effects.filter((e) => !e.overlay && e.depth === k);
     for (const e of here) drawFx(e, "back");
     for (const u of byDepth.get(k) ?? []) {
@@ -252,6 +268,12 @@ function draw() {
     for (const e of here) drawFx(e, "front");
   }
   for (const e of effects) if (e.overlay) { drawFx(e, "back"); drawFx(e, "front"); }
+  // shafts of window light, faint and warm, over the floor and anyone standing in them
+  if (shafts.length) {
+    ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255, 214, 150, 0.06)";
+    for (const q of shafts) { ctx.beginPath(); ctx.moveTo(...q[0]); for (const pt of q.slice(1)) ctx.lineTo(...pt); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+  }
   // health bars, over everything
   for (const u of b.units) {
     const v = vis.get(u.id); if (v.gone || (v.blink && Math.floor(clock / 80) % 2)) continue;
@@ -770,10 +792,22 @@ window.addEventListener("resize", fit);
 const PARTY_KEY = "pixelrpg.party";
 let party = P.parseParty((() => { try { return localStorage.getItem(PARTY_KEY); } catch (e) { return null; } })());
 const saveParty = (p) => { party = p; try { localStorage.setItem(PARTY_KEY, P.serializeParty(p)); } catch (e) { /* storage blocked */ } };
+const ARENA_KEY = "pixelrpg.arena";
+let arena = (() => { try { const a = localStorage.getItem(ARENA_KEY); return MAPS[a] ? a : "cloister"; } catch (e) { return "cloister"; } })();
+function arenaChips() {
+  const box = $("musterArena"); if (!box) return;
+  box.replaceChildren(...Object.entries(MAPS).map(([id, m]) => {
+    const c = document.createElement("button"); c.type = "button"; c.className = "chip"; c.textContent = m.name; c.title = m.desc;
+    c.setAttribute("aria-pressed", String(arena === id));
+    c.addEventListener("click", () => { arena = id; try { localStorage.setItem(ARENA_KEY, id); } catch (e) { /* storage blocked */ } arenaChips(); });
+    return c;
+  }));
+}
+arenaChips();
 const muster = createMuster({
   party,
   onChange: saveParty,
-  onStart(p) { saveParty(p); muster.hide(); $("battleView").hidden = false; fit(); reset(); window.scrollTo(0, 0); },
+  onStart(p) { saveParty(p); muster.hide(); $("battleView").hidden = false; reset(); window.scrollTo(0, 0); },
 });
 function showMuster() {
   if (ui?.busy && ui.mode !== "over") return;

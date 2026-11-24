@@ -29,6 +29,15 @@ npm run site
 python3 -m http.server --directory docs 8000
 ```
 
+## Arenas
+
+Battles are fought on an arena, chosen on the party screen. Maps are data in `docs/lib/maps.js` (terrain, heights, props, start tiles, back walls, light), so a new arena is a new entry.
+
+- **River crossing:** open country, a hill with old stones, a river with one bridge and a ford.
+- **Cloister and chapel:** a gothic monastery. The chapel at the back: a raised chancel of chequered marble with the altar against the apse wall under its rose window, steps down to a nave with pews and a carpet aisle, an arcade of clustered columns along its side. A gallery runs high along the left wall (height 4, a cliff over the aisle), reached by a grand stair at the front. The cloister at the front: a walk round a sunken garth with a well and a yew. Your party starts in the cloister; the enemy holds the chapel, its archer on the gallery.
+
+The gothic pieces are in `docs/lib/gothic.js`: floors (flagstone, marble, the carpet runner, stairs, gallery planks), props (clustered column, pew, candelabrum, altar, saint's statue, lectern, tomb, well, yew), and the two back walls: ashlar, vaulting shafts, tall lancets of leaded stained glass, a clerestory of small lancets and oculi, rib arches with the vault in shadow above, and a rose window. Faint shafts of window light fall across the floor. Sheets: `tiles-gothic.png`, `props-gothic.png`, `arena-cloister.png`.
+
 ## Battle demo
 
 `docs/battle.html` is a small playable battle on the demo map: six player units against six enemy units. The enemies use the same six classes as the player, with the middle gear tier and the other body type. There are no monsters.
@@ -94,6 +103,8 @@ node tools/zoom.mjs sprites/art/tiers.png preview.png 3
 | `docs/lib/party.js` | The party between battles: gear changes (two-handed rules), look names, and safe save and load. No DOM |
 | `docs/lib/gearlist.js` | Chip labels for every gear piece, hair colours and stance names, shared by the Wardrobe and the party screen |
 | `docs/muster.js` | The party screen on the battle page |
+| `docs/lib/maps.js` | The arenas: terrain, heights, props, start tiles, walls and light |
+| `docs/lib/gothic.js` | Gothic architecture: floors, props, back walls with windows, light shafts |
 | `docs/lib/battle.js` | The battle rules: demo map, demo teams, skills and MP, movement, facing damage, turns, enemy AI. No DOM |
 | `docs/battle.html`, `docs/battle.js` | The battle demo page |
 | `tools/battle-test.mjs` | Tests for the battle rules (`npm test`) |

@@ -9,7 +9,7 @@ const { encodePNG } = await import(pathToFileURL(`${LIB}/tools/lib/png.mjs`).hre
 mkdirSync(OUT, { recursive: true });
 
 import * as core from "../docs/lib/pixelrpg.js";
-import { terrain, height, PROPS as MAP_PROPS } from "../docs/lib/battle.js";
+import { MAPS } from "../docs/lib/maps.js";
 import { LOOKS, KNIGHT_GS, LANCER_PH, ENCHANTED, bodyOf } from "../docs/lib/presets.js";
 const { ARMS, ATK, BAYER, BODYSLOT, BOWS, CH, CW, FX, FY, Fv, GEAR, HH, HW, ICONS, Img, L, Layer, MARK, MD, ORDER, OY0, P, POSES, R, RODS, SLOTS, SPEARS, STANCES, STEP, TERRAIN, TH, TW, TWO_HANDED, add2, backDrape, band, bow2, box, capsule, chainShirt, cursor, daggerAt, darken, dirOf, drawBase, drawHair, drawLimbs, dress, ell, faceOpen, footAt, frame, hash, headDiamond, hex, icon, inTop, lathe, layerImg, legEach, lerp2, line, maceAt, markTop, mirrorImg, nearHand, outline, pole, poly, prop, pw, rig, ringTex, rowTint, scaleTex, shadow, sleeves2, sleevesP, solid, stanceOf, swordAt, thick, tile, setCell, setPNGWriter, setStyle, STYLE, FACINGS, drawUnit } = core;
 setStyle(process.env.STYLE === "classic" ? "classic" : "muted"); // STYLE=classic npm run art for the original look
@@ -104,9 +104,9 @@ function battle(file, { marks = true } = {}) {
   const N = 11, W = N * TW + HW, H = N * TH + 6 * STEP + 76;
   const img = new Img(W, H);
   const OX = N * HW - HW + 8, OY = 60, centers = {};
-  const ter = terrain, H2 = height; // the demo map, shared with the battle rules (docs/lib/battle.js)
+  const ter = MAPS.river.terrain, H2 = MAPS.river.height; // the demo map, shared with the battle rules (docs/lib/maps.js)
   const units = { "3,7": ["knight", "SE"], "6,8": ["mage", "SE"], "0,5": ["archer", "SE"], "8,3": ["thief", "NE"], "2,9": ["cleric", "SE"], "1,1": ["lancer", "NE"] };
-  const props = MAP_PROPS;
+  const props = MAPS.river.props;
   const moveSet = new Set(["3,8", "4,7", "3,9", "2,8", "4,9", "5,8", "4,10", "2,7", "5,7"]);
   const atkSet = new Set(["3,6", "4,6"]);
   for (let s = 0; s <= 2 * (N - 1); s++) for (let i = 0; i < N; i++) {
@@ -317,4 +317,32 @@ console.log("ok", mapInfo);
   }));
   s.png("teams.png");
   console.log("teams", rows.map(([a, b]) => b ?? a).join(", "));
+}
+
+// the gothic arena: its floors (each at heights 1 and 3), its props, and the whole "Cloister and chapel" map with
+// its walls and the demo units at their start tiles
+{
+  const { drawWalls, gothicProp, GOTHIC } = await import("../docs/lib/gothic.js");
+  const { DEMO_PARTY, DEMO_FOES } = await import("../docs/lib/battle.js");
+  const floors = ["flagstone", "marble", "carpetN", "carpetS", "stairsA", "stairsB", "planks"];
+  const ft = new Img(floors.length * 52, 2 * 64);
+  floors.forEach((t, i) => [1, 3].forEach((h, r) => { const im = tile(t, h, i * 5 + r); ft.blit(im, i * 52 + 2, r * 64 + 60 - im.h); }));
+  ft.png("tiles-gothic.png");
+  const pics = GOTHIC.map((k) => gothicProp(k)), ph = Math.max(...pics.map((p) => p.h)), gp = new Img(pics.length * 40, ph);
+  pics.forEach((p, i) => gp.blit(p, i * 40, ph - p.h));
+  gp.png("props-gothic.png");
+  const m = MAPS.cloister, N = m.n, OX = N * HW - HW + 8, OY = m.top, img = new Img(N * TW + HW, N * TH + 6 * STEP + 76 + (OY - 60));
+  drawWalls(img, OX + HW, OY + 5 * STEP, N, m.walls);
+  const at = {};
+  m.party.forEach((t, i) => (at[t.join()] = [DEMO_PARTY[i], "NE"])); m.foes.forEach((t, i) => (at[t.join()] = [DEMO_FOES[i], "SW"]));
+  for (let s = 0; s <= 2 * (N - 1); s++) for (let i = 0; i < N; i++) {
+    const j = s - i; if (j < 0 || j >= N) continue;
+    const h = m.height(i, j), sx = OX + (i - j) * HW, sy = OY + (i + j) * HH - h * STEP + 5 * STEP, fx = sx + HW, fy = sy;
+    img.blit(tile(m.terrain(i, j), h + 1, i * 13 + j * 7), sx, sy - STEP);
+    const k = `${i},${j}`;
+    if (m.props[k]) { const p = gothicProp(m.props[k]) ?? prop(m.props[k]); img.blit(p, fx - 20, fy - (p.h - 8)); }
+    if (at[k]) { const [c, f] = at[k]; img.blit(drawUnit(c.look.loadout, f, 0, c.look.body), fx - FX, fy - FY + 1); }
+  }
+  img.png("arena-cloister.png");
+  console.log("gothic arena", floors.length, "floors,", GOTHIC.length, "props");
 }

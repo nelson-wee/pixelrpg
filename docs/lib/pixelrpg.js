@@ -1376,12 +1376,12 @@ const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
 const TERRAIN = {
   grass:  { top: "forest", side: "leather", lip: 2, tex: (x, y, s) => (hash(x, y, s) > 0.86 ? 4 : hash(x, y, s + 1) > 0.8 ? 2 : 3) },
   dirt:   { top: "leather", side: "leather", tex: (x, y, s) => (hash(x, y, s) > 0.85 ? 4 : hash(x, y, s + 2) > 0.82 ? 2 : 3) },
-  cobble: { top: "stone", side: "stone", tex: (x, y, s) => { const cx = (x + (Math.floor(y / 4) % 2) * 3) % 6, cy = y % 4; return cx === 0 || cy === 0 ? 1 : cx === 1 || cy === 1 ? 4 : 3; } },
+  cobble: { top: "stone", side: "stone", masonry: true, tex: (x, y, s) => { const cx = (x + (Math.floor(y / 4) % 2) * 3) % 6, cy = y % 4; return cx === 0 || cy === 0 ? 1 : cx === 1 || cy === 1 ? 4 : 3; } },
   sand:   { top: "sand", side: "sand", tex: (x, y, s) => (hash(x, y, s) > 0.88 ? 4 : (x + y * 3) % 9 === 0 ? 2 : 3) },
   snow:   { top: "snow", side: "stone", lip: 2, tex: (x, y, s) => (hash(x, y, s) > 0.9 ? 2 : 3) + (hash(x, y, s + 3) > 0.92 ? 1 : 0) },
   water:  { top: "water", side: "water", tex: (x, y, s) => ((x + y * 2 + s) % 11 === 0 && y % 3 === 0 ? 4 : (x - y * 2) % 13 === 0 ? 3 : 2) },
   wood:   { top: "leather", side: "leather", tex: (x, y, s) => ((x + 2 * y) % 8 === 0 ? 1 : (x + 2 * y) % 8 === 1 ? 4 : 3) },
-  moss:   { top: "stone", side: "stone", tex: (x, y, s) => (hash(x, y, s) > 0.6 ? P("forest", hash(x, y, s + 4) > 0.5 ? 3 : 2) : hash(x, y, s) > 0.3 ? 3 : 2) },
+  moss:   { top: "stone", side: "stone", masonry: true, tex: (x, y, s) => (hash(x, y, s) > 0.6 ? P("forest", hash(x, y, s + 4) > 0.5 ? 3 : 2) : hash(x, y, s) > 0.3 ? 3 : 2) },
 };
 const inTop = (x, y) => { const dx = Math.abs(x + 0.5 - HW) / HW, dy = Math.abs(y + 0.5 - HH) / HH; return dx + dy <= 1; };
 function tile(type, h, seed = 0, mark = null) {
@@ -1394,7 +1394,7 @@ function tile(type, h, seed = 0, mark = null) {
       const dy = y - yTop;
       let i = left ? 2 : 1;
       if (T.lip && dy < T.lip) { img.set(x, y, P(T.top, left ? 2 : 1)); continue; }
-      if (type === "cobble" || type === "moss") i = (dy % STEP === STEP - 1 || (dy + (left ? 0 : 6)) % STEP === 0 && (x + Math.floor(dy / STEP) * 4) % 8 === 0) ? 0 : i;
+      if (T.masonry) i = (dy % STEP === STEP - 1 || (dy + (left ? 0 : 6)) % STEP === 0 && (x + Math.floor(dy / STEP) * 4) % 8 === 0) ? 0 : i;
       else if (dy % STEP === STEP - 1 && hash(x, dy, seed) > 0.3) i = left ? 1 : 0;
       else if (hash(x, y, seed + 9) > 0.93) i += 1;
       if (y === yTop + depth) i = 0;

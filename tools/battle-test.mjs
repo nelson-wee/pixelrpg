@@ -188,6 +188,38 @@ const roster = (rows) => rows.map(([id, team, archetype, name, tile]) => ({ char
   x.atk = 60; x.acted = false; const r2 = B.strike(b, x, m);
   assert.ok(!B.hasStatus(m, "aegis"), "the aegis breaks when it is used up"); assert.deepEqual(r2.broke, ["aegis"]);
 }
+// the arenas: start tiles are free and walkable, every unit can reach the other side, stairs climb at most JUMP,
+// the gallery is high ground reached by its stair; an AI battle ends on each map
+{
+  const { MAPS } = await import("../docs/lib/maps.js");
+  for (const [id, m] of Object.entries(MAPS)) {
+    const b = B.newBattle(B.demoRoster(B.DEMO_PARTY, id), { map: id, seed: 3 });
+    assert.equal(b.map, id); assert.equal(B.mapOf(), m);
+    const starts = [...m.party, ...m.foes].map(B.key);
+    assert.equal(new Set(starts).size, 12, `${id}: twelve different start tiles`);
+    for (const u of b.units) assert.ok(B.walkable(u.tile), `${id}: ${u.name} starts on a free tile`);
+    // flood the walkable grid from the first party tile, ignoring units: every start tile must be in it
+    const seen = new Set([B.key(m.party[0])]), q = [m.party[0]];
+    while (q.length) { const t = q.shift(); for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = [t[0] + dc, t[1] + dr]; if (!seen.has(B.key(n)) && B.walkable(n) && Math.abs(B.height(...n) - B.height(...t)) <= B.JUMP) { seen.add(B.key(n)); q.push(n); } } }
+    for (const k of starts) assert.ok(seen.has(k), `${id}: ${k} can be reached`);
+    let guard = 0;
+    while (!B.winner(b) && guard++ < 120) {
+      for (const u of b.units.filter((x) => x.alive && x.team === b.phase)) {
+        const plan = B.aiPlan(b, u); B.moveAlong(b, u, plan.path);
+        if (plan.action?.type === "attack") B.strike(b, u, plan.action.target);
+        if (plan.action?.type === "skill") B.cast(b, u, plan.action.skill, plan.action.tile);
+        B.finish(b, u, plan.facing); if (B.winner(b)) break;
+      }
+      if (!B.winner(b)) B.nextPhase(b);
+    }
+    assert.ok(B.winner(b), `${id}: the AI battle ends`);
+    console.log(`${m.name}: ${B.winner(b)} wins in round ${b.round}.`);
+  }
+  const m = MAPS.cloister;
+  assert.equal(m.height(0, 6), 4, "the gallery is high ground"); assert.equal(m.height(2, 6), 1);
+  assert.equal(m.height(0, 9) - m.height(0, 10), 1); assert.equal(m.height(0, 8) - m.height(0, 9), 1);
+  B.useMap("river");
+}
 // every gear piece is an item, and every item is a gear piece
 {
   const { GEAR } = await import("../docs/lib/pixelrpg.js"), { ITEMS } = await import("../docs/lib/items.js");
